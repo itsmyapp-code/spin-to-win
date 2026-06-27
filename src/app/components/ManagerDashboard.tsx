@@ -222,7 +222,7 @@ export default function ManagerDashboard() {
               <tr>
                 <SortableHeader label="Full Name" field="name" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
                 <SortableHeader label="Email" field="email" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                <SortableHeader label="Token" field="token" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                <SortableHeader label="Token / Spin URL" field="token" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
                 <SortableHeader label="Status" field="spinStatus" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
                 <SortableHeader label="Prize" field="prizeName" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
                 <th>Code</th>
@@ -237,34 +237,74 @@ export default function ManagerDashboard() {
                   </td>
                 </tr>
               )}
-              {sorted.map((c) => (
-                <tr key={c.id}>
-                  <td style={{ fontWeight: 600 }}>{c.name}</td>
-                  <td style={{ color: 'var(--color-text-secondary)' }}>{c.email}</td>
-                  <td>
-                    <code style={{ fontSize: '0.72rem', color: 'var(--color-text-dim)', letterSpacing: '0.05em' }}>{c.token}</code>
-                  </td>
-                  <td>
-                    {c.spinStatus === 'fresh'
-                      ? <span className="badge-error">Fresh</span>
-                      : <span className="badge-sage">Spun</span>
-                    }
-                  </td>
-                  <td style={{ color: 'var(--color-text-secondary)' }}>{c.prizeName ?? '—'}</td>
-                  <td>
-                    {c.prizeCode
-                      ? <code style={{ color: 'var(--color-gold)', fontSize: '0.78rem', letterSpacing: '0.05em', fontWeight: 700 }}>{c.prizeCode}</code>
-                      : <span style={{ color: 'var(--color-text-dim)' }}>—</span>
-                    }
-                  </td>
-                  <td>
-                    {c.redeemedAt
-                      ? <span className="badge-sage" style={{ fontSize: '0.65rem' }}>{new Date(c.redeemedAt).toLocaleDateString('en-GB')} {new Date(c.redeemedAt).toLocaleTimeString('en-GB')}</span>
-                      : <span className="badge-gold">UNCLAIMED</span>
-                    }
-                  </td>
-                </tr>
-              ))}
+              {sorted.map((c) => {
+                const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+                const spinUrl = `${baseUrl}/?token=${c.token}`;
+                return (
+                  <tr key={c.id}>
+                    <td style={{ fontWeight: 600 }}>{c.name}</td>
+                    <td style={{ color: 'var(--color-text-secondary)' }}>{c.email}</td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <code style={{ fontSize: '0.72rem', color: 'var(--color-gold)', letterSpacing: '0.05em', fontWeight: 'bold' }}>{c.token}</code>
+                        <a
+                          href={spinUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            color: 'var(--color-sage)',
+                            fontSize: '0.68rem',
+                            textDecoration: 'none',
+                            border: '1px solid rgba(83, 135, 115, 0.3)',
+                            padding: '2px 6px',
+                            borderRadius: '3px',
+                            background: 'rgba(83, 135, 115, 0.05)'
+                          }}
+                        >
+                          ↗ Link
+                        </a>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(spinUrl);
+                          }}
+                          style={{
+                            background: 'transparent',
+                            border: '1px solid var(--color-border)',
+                            color: 'var(--color-text-secondary)',
+                            fontSize: '0.65rem',
+                            cursor: 'pointer',
+                            padding: '2px 6px',
+                            borderRadius: '3px',
+                            fontFamily: 'var(--font-mono)'
+                          }}
+                          title="Copy Link"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                    </td>
+                    <td>
+                      {c.spinStatus === 'fresh'
+                        ? <span className="badge-error">Fresh</span>
+                        : <span className="badge-sage">Spun</span>
+                      }
+                    </td>
+                    <td style={{ color: 'var(--color-text-secondary)' }}>{c.prizeName ?? '—'}</td>
+                    <td>
+                      {c.prizeCode
+                        ? <code style={{ color: 'var(--color-gold)', fontSize: '0.78rem', letterSpacing: '0.05em', fontWeight: 700 }}>{c.prizeCode}</code>
+                        : <span style={{ color: 'var(--color-text-dim)' }}>—</span>
+                      }
+                    </td>
+                    <td>
+                      {c.redeemedAt
+                        ? <span className="badge-sage" style={{ fontSize: '0.65rem' }}>{new Date(c.redeemedAt).toLocaleDateString('en-GB')} {new Date(c.redeemedAt).toLocaleTimeString('en-GB')}</span>
+                        : <span className="badge-gold">UNCLAIMED</span>
+                      }
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
