@@ -3,7 +3,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import { initFirebase } from '@/lib/firebase';
-import { getWheelConfig, saveWheelConfig, getAllCustomers } from '@/lib/firestoreOps';
+import { getWheelConfig, saveWheelConfig } from '@/lib/firestoreOps';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import type { WheelConfig, PrizeTier, Customer } from '@/lib/types';
 import StaffAuthForm from './StaffAuthForm';
 
@@ -21,15 +22,32 @@ export default function ManagerDashboard() {
 
   useEffect(() => {
     if (!user || user.isAnonymous || !staffRole) return;
+    const { db } = initFirebase();
+
+    // 1. Get initial wheel configurations
     (async () => {
-      const { db } = initFirebase();
-      const [cfg, custs] = await Promise.all([getWheelConfig(db), getAllCustomers(db)]);
-      setConfig(cfg);
-      setEditedPrizes(cfg.prizes.map((p) => ({ ...p })));
-      setCustomTerms(cfg.customTerms || '');
+      try {
+        const cfg = await getWheelConfig(db);
+        setConfig(cfg);
+        setEditedPrizes(cfg.prizes.map((p) => ({ ...p })));
+        setCustomTerms(cfg.customTerms || '');
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+
+    // 2. Set up real-time live customer sync listener
+    const q = query(collection(db, 'spinCustomers'), orderBy('createdAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const custs = snapshot.docs.map((doc) => doc.data() as Customer);
       setCustomers(custs);
       setLoading(false);
-    })();
+    }, (error) => {
+      console.error("Firestore sync error:", error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, [user, staffRole]);
 
 
@@ -231,13 +249,31 @@ export default function ManagerDashboard() {
 
       {/* Audit Ledger */}
       <section>
-        <div style={{ marginBottom: '16px' }}>
-          <h2 style={{ color: 'var(--color-gold)', fontSize: '0.9rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>
-            Unified Audit Ledger
-          </h2>
-          <p style={{ color: 'var(--color-text-dim)', fontSize: '0.72rem', margin: '4px 0 0' }}>
-            {customers.length} customers registered · Click column headers to sort
-          </p>
+        <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+          <div>
+            <h2 style={{ color: 'var(--color-gold)', fontSize: '0.9rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>
+              Unified Audit Ledger
+            </h2>
+            <p style={{ color: 'var(--color-text-dim)', fontSize: '0.72rem', margin: '4px 0 0' }}>
+              {customers.length} customers registered · Live-Synced ⚡
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              setLoading(true);
+              const { db } = initFirebase();
+              getWheelConfig(db).then((cfg) => {
+                setConfig(cfg);
+                setEditedPrizes(cfg.prizes.map((p) => ({ ...p })));
+                setCustomTerms(cfg.customTerms || '');
+                setLoading(false);
+              }).catch(() => setLoading(false));
+            }}
+            className="btn-ghost"
+            style={{ fontSize: '0.68rem', padding: '6px 12px' }}
+          >
+            🔄 Refresh Config
+          </button>
         </div>
 
         <div className="glass" style={{ borderRadius: '8px', overflow: 'auto' }}>
