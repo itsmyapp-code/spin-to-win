@@ -83,6 +83,56 @@ export default function SpinWheel({ prizes, onSpinComplete, disabled }: SpinWhee
     angle += equalSpan;
   }
 
+  // Web Audio click generator
+  const playTickSound = useCallback((frequency: number = 800, duration: number = 0.04) => {
+    if (typeof window === 'undefined') return;
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(frequency, ctx.currentTime);
+      
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + duration);
+    } catch (e) {
+      // Audio context blocked/unsupported
+    }
+  }, []);
+
+  const playWinChime = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const playNote = (freq: number, start: number, duration: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+        gain.gain.setValueAtTime(0, ctx.currentTime + start);
+        gain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + start + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + start);
+        osc.stop(ctx.currentTime + start + duration);
+      };
+      playNote(523.25, 0, 0.15); // C5
+      playNote(659.25, 0.12, 0.15); // E5
+      playNote(783.99, 0.24, 0.4); // G5
+    } catch (e) {}
+  }, []);
+
   const handleSpin = useCallback(() => {
     if (spinState !== 'idle' || disabled) return;
     setSpinState('spinning');
@@ -91,23 +141,32 @@ export default function SpinWheel({ prizes, onSpinComplete, disabled }: SpinWhee
     const selectedSegment = segments[selectedIndex];
     const prizeCode = generateWinCode(selectedSegment.prize.id);
 
-    // Compute target rotation so the selected segment center aligns with the needle (top = 0°)
-    const targetAngle = selectedSegment.midAngle;
-    const extraSpins = (7 + Math.floor(Math.random() * 4)) * 360;
-    const target = currentRotation.current + extraSpins + (360 - (currentRotation.current % 360)) - targetAngle + (360 - (currentRotation.current % 360));
-
-    // Simpler: align so midAngle of chosen segment ends at 0°
+    // Align so midAngle of chosen segment ends at 0°
     const alignTo = 360 - (selectedSegment.midAngle % 360);
     const newRotation = currentRotation.current - (currentRotation.current % 360) + 360 * 8 + alignTo;
 
     currentRotation.current = newRotation;
     setRotation(newRotation);
 
+    // Schedule ticks slowing down gradually over 3.5 seconds
+    const totalDuration = 3500;
+    const ticksCount = 42;
+    for (let i = 0; i < ticksCount; i++) {
+      // Decelerating time curve (using quadratic ease-out)
+      const ratio = i / ticksCount;
+      const delay = totalDuration * (1 - Math.pow(1 - ratio, 2.5));
+      const pitch = 850 - 450 * ratio; // Lower pitch as it slows down
+      setTimeout(() => {
+        playTickSound(pitch, 0.04);
+      }, delay);
+    }
+
     setTimeout(() => {
       setSpinState('complete');
+      playWinChime();
       onSpinComplete(selectedSegment.prize, prizeCode);
     }, 3600);
-  }, [spinState, disabled, prizes, segments, onSpinComplete]);
+  }, [spinState, disabled, prizes, segments, onSpinComplete, playTickSound, playWinChime]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px' }}>
