@@ -1,0 +1,327 @@
+'use client';
+
+import React, { useState, useCallback, useRef } from 'react';
+import { useAuth } from './AuthContext';
+import { initFirebase } from '@/lib/firebase';
+import { getCustomerByCode, burnVoucher } from '@/lib/firestoreOps';
+import type { Customer, VerifyState } from '@/lib/types';
+
+function formatCode(raw: string): string {
+  const cleaned = raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const parts: string[] = [];
+  if (cleaned.length > 0) parts.push(cleaned.slice(0, 3));
+  if (cleaned.length > 3) parts.push(cleaned.slice(3, 9));
+  if (cleaned.length > 9) parts.push(cleaned.slice(9));
+  return parts.join('-');
+}
+
+export default function StaffTerminal() {
+  const { user, staffRole, signInAsStaff, authError, authLoading } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [codeInput, setCodeInput] = useState('');
+  const [verifyState, setVerifyState] = useState<VerifyState>('idle');
+  const [foundCustomer, setFoundCustomer] = useState<Customer | null>(null);
+  const [burning, setBurning] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogin = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      await signInAsStaff(email, password);
+    },
+    [email, password, signInAsStaff]
+  );
+
+  const handleCodeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatCode(e.target.value);
+    setCodeInput(formatted);
+    setVerifyState('idle');
+    setFoundCustomer(null);
+  }, []);
+
+  const handleVerify = useCallback(async () => {
+    const code = codeInput.replace(/-/g, '').toUpperCase();
+    if (code.length < 9) return;
+
+    setVerifyState('loading');
+    try {
+      const { db } = initFirebase();
+      const customer = await getCustomerByCode(db, codeInput);
+      if (!customer) {
+        setVerifyState('not_found');
+        setFoundCustomer(null);
+      } else if (customer.redeemedAt) {
+        setVerifyState('already_redeemed');
+        setFoundCustomer(customer);
+      } else if (customer.spinStatus === 'spun') {
+        setVerifyState('valid');
+        setFoundCustomer(customer);
+      } else {
+        setVerifyState('not_found');
+        setFoundCustomer(null);
+      }
+    } catch {
+      setVerifyState('not_found');
+    }
+  }, [codeInput]);
+
+  const handleBurn = useCallback(async () => {
+    if (!foundCustomer || !user?.email) return;
+    setBurning(true);
+    try {
+      const { db } = initFirebase();
+      await burnVoucher(db, foundCustomer.id, user.email);
+      setVerifyState('burned');
+      setFoundCustomer((prev) =>
+        prev ? { ...prev, redeemedAt: new Date().toISOString(), redeemedByEmail: user.email ?? '' } : prev
+      );
+    } catch {
+      // surface error state
+    } finally {
+      setBurning(false);
+    }
+  }, [foundCustomer, user]);
+
+  const handleReset = useCallback(() => {
+    setCodeInput('');
+    setVerifyState('idle');
+    setFoundCustomer(null);
+    inputRef.current?.focus();
+  }, []);
+
+  // ─── Auth Gate ────────────────────────────────────────────────────────────────
+  if (!user || user.isAnonymous || !staffRole) {
+    return (
+      <div className="animate-fade-in" style={{ maxWidth: '440px', margin: '80px auto', padding: '0 24px' }}>
+        <div className="glass" style={{ padding: '40px', borderRadius: '8px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+            <div style={{ fontSize: '2rem', marginBottom: '10px' }}>🏷️</div>
+            <h2 style={{ color: 'var(--color-gold)', fontSize: '1rem', letterSpacing: '0.1em', margin: '0 0 6px' }}>
+              STAFF TERMINAL
+            </h2>
+            <p style={{ color: 'var(--color-text-dim)', fontSize: '0.75rem', margin: 0 }}>
+              Authorised personnel only
+            </p>
+          </div>
+
+          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div>
+              <label htmlFor="staff-email" style={{ display: 'block', color: 'var(--color-text-secondary)', fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }}>
+                Email Address
+              </label>
+              <input
+                id="staff-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="input-base"
+                placeholder="staff@sevenstars.pub"
+                required
+                autoComplete="email"
+              />
+            </div>
+            <div>
+              <label htmlFor="staff-password" style={{ display: 'block', color: 'var(--color-text-secondary)', fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }}>
+                Password
+              </label>
+              <input
+                id="staff-password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="input-base"
+                placeholder="••••••••"
+                required
+                autoComplete="current-password"
+              />
+            </div>
+
+            {authError && (
+              <div className="badge-error" style={{ padding: '8px 12px', borderRadius: '4px', fontSize: '0.76rem', display: 'block' }}>
+                {authError}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              id="staff-login-btn"
+              disabled={authLoading}
+              className="btn-gold"
+              style={{ marginTop: '8px', width: '100%' }}
+            >
+              {authLoading ? 'SIGNING IN…' : 'SIGN IN'}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── POS Terminal ─────────────────────────────────────────────────────────────
+  return (
+    <div className="animate-fade-in" style={{ maxWidth: '640px', margin: '40px auto', padding: '0 24px' }}>
+      {/* Header bar */}
+      <div className="glass" style={{ padding: '14px 20px', borderRadius: '6px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={{ fontSize: '1.1rem' }}>🏷️</span>
+          <div>
+            <p style={{ color: 'var(--color-gold)', fontSize: '0.72rem', letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0, fontWeight: 700 }}>
+              Staff Terminal
+            </p>
+            <p style={{ color: 'var(--color-text-dim)', fontSize: '0.68rem', margin: 0 }}>
+              {user.email} · {staffRole.role.toUpperCase()}
+            </p>
+          </div>
+        </div>
+        <span className="badge-sage">{staffRole.role}</span>
+      </div>
+
+      {/* Code input panel */}
+      <div className="glass cursor-glow-panel" style={{ padding: '32px', borderRadius: '8px', marginBottom: '20px' }}>
+        <label htmlFor="voucher-code" style={{ display: 'block', color: 'var(--color-text-secondary)', fontSize: '0.7rem', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '10px' }}>
+          Enter Voucher Code
+        </label>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <input
+            id="voucher-code"
+            ref={inputRef}
+            type="text"
+            value={codeInput}
+            onChange={handleCodeChange}
+            onKeyDown={(e) => e.key === 'Enter' && handleVerify()}
+            className="input-base"
+            placeholder="WIN-000000-P0"
+            maxLength={16}
+            style={{
+              fontSize: '1.2rem',
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              flex: 1,
+            }}
+            autoFocus
+            autoComplete="off"
+            spellCheck={false}
+            disabled={verifyState === 'burned'}
+          />
+          <button
+            id="verify-btn"
+            onClick={handleVerify}
+            disabled={codeInput.length < 10 || verifyState === 'loading' || verifyState === 'burned'}
+            className="btn-gold"
+            style={{ whiteSpace: 'nowrap', minWidth: '120px' }}
+          >
+            {verifyState === 'loading' ? '⏳ Checking…' : '✦ Verify'}
+          </button>
+        </div>
+      </div>
+
+      {/* Verification result */}
+      {verifyState === 'not_found' && (
+        <div className="animate-fade-in" style={{
+          padding: '20px 24px',
+          borderRadius: '6px',
+          background: 'var(--color-crimson-ghost)',
+          border: '1px solid rgba(196,90,90,0.3)',
+        }}>
+          <p style={{ color: 'var(--color-crimson)', fontWeight: 700, fontSize: '0.82rem', letterSpacing: '0.08em', margin: '0 0 4px' }}>
+            ✗ ERROR: Code missing from validation ledger
+          </p>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem', margin: 0 }}>
+            The code <strong style={{ color: 'var(--color-text-primary)' }}>{codeInput}</strong> was not found. Check the code and try again.
+          </p>
+        </div>
+      )}
+
+      {verifyState === 'already_redeemed' && foundCustomer && (
+        <div className="animate-fade-in" style={{
+          padding: '20px 24px',
+          borderRadius: '6px',
+          background: 'var(--color-crimson-ghost)',
+          border: '1px solid rgba(196,90,90,0.3)',
+        }}>
+          <p style={{ color: 'var(--color-crimson)', fontWeight: 700, fontSize: '0.82rem', letterSpacing: '0.08em', margin: '0 0 8px' }}>
+            ✗ ERROR: Voucher previously claimed
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.78rem' }}>
+            <div>
+              <span style={{ color: 'var(--color-text-dim)', fontSize: '0.68rem', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Claimed by</span>
+              <p style={{ color: 'var(--color-text-primary)', margin: '2px 0 0', fontWeight: 600 }}>{foundCustomer.name}</p>
+            </div>
+            <div>
+              <span style={{ color: 'var(--color-text-dim)', fontSize: '0.68rem', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Timestamp (UTC)</span>
+              <p style={{ color: 'var(--color-text-primary)', margin: '2px 0 0', fontWeight: 600 }}>
+                {foundCustomer.redeemedAt ? new Date(foundCustomer.redeemedAt).toUTCString() : '—'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {verifyState === 'valid' && foundCustomer && (
+        <div className="animate-fade-in" style={{
+          padding: '28px',
+          borderRadius: '8px',
+          background: 'var(--color-sage-ghost)',
+          border: '1px solid rgba(83,135,115,0.4)',
+        }}>
+          <div className="badge-sage" style={{ marginBottom: '16px' }}>✓ Valid — Active Voucher</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+            <InfoRow label="Customer Name" value={foundCustomer.name} />
+            <InfoRow label="Email" value={foundCustomer.email} />
+            <InfoRow label="Prize" value={foundCustomer.prizeName ?? '—'} highlight />
+            <InfoRow label="Code" value={foundCustomer.prizeCode ?? '—'} highlight />
+          </div>
+          <button
+            id="burn-voucher-btn"
+            onClick={handleBurn}
+            disabled={burning}
+            className="btn-sage"
+            style={{ width: '100%', fontSize: '0.9rem', padding: '16px' }}
+          >
+            {burning ? '⏳ Processing…' : '✔ Authorize & Burn Voucher Reward'}
+          </button>
+        </div>
+      )}
+
+      {verifyState === 'burned' && foundCustomer && (
+        <div className="animate-fade-in-scale" style={{
+          padding: '28px',
+          borderRadius: '8px',
+          background: 'var(--color-sage-ghost)',
+          border: '1px solid rgba(83,135,115,0.6)',
+          textAlign: 'center',
+        }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>✅</div>
+          <h3 style={{ color: 'var(--color-sage)', fontSize: '1rem', letterSpacing: '0.08em', margin: '0 0 8px' }}>
+            VOUCHER REDEEMED
+          </h3>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem', lineHeight: 1.7, margin: '0 0 16px' }}>
+            {foundCustomer.name}'s voucher for{' '}
+            <strong style={{ color: 'var(--color-text-primary)' }}>{foundCustomer.prizeName}</strong>{' '}
+            has been marked as redeemed.<br />
+            <span style={{ color: 'var(--color-text-dim)', fontSize: '0.72rem' }}>
+              UTC: {foundCustomer.redeemedAt ? new Date(foundCustomer.redeemedAt).toUTCString() : new Date().toUTCString()}
+            </span>
+          </p>
+          <button id="reset-terminal-btn" onClick={handleReset} className="btn-gold" style={{ minWidth: '200px' }}>
+            ↩ New Verification
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function InfoRow({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <div>
+      <p style={{ color: 'var(--color-text-dim)', fontSize: '0.65rem', letterSpacing: '0.12em', textTransform: 'uppercase', margin: '0 0 4px' }}>
+        {label}
+      </p>
+      <p style={{ color: highlight ? 'var(--color-gold)' : 'var(--color-text-primary)', fontSize: '0.88rem', fontWeight: highlight ? 700 : 500, margin: 0 }}>
+        {value}
+      </p>
+    </div>
+  );
+}

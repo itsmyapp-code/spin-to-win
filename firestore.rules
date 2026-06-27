@@ -1,0 +1,23 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Wheel configuration — any authenticated user reads, only email-auth users write
+    match /spinConfig/{doc} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.token.email != null;
+    }
+
+    // Customer records — any authenticated user reads/writes
+    match /spinCustomers/{customerId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // Staff role registry — any authenticated user reads, only email-auth writes
+    match /spinRoles/{email} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.token.email != null;
+    }
+  }
+}
