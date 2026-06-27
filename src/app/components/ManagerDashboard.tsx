@@ -17,6 +17,7 @@ export default function ManagerDashboard() {
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [sortField, setSortField] = useState<keyof Customer>('createdAt');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [customTerms, setCustomTerms] = useState('');
 
   useEffect(() => {
     if (!user || user.isAnonymous || !staffRole) return;
@@ -25,6 +26,7 @@ export default function ManagerDashboard() {
       const [cfg, custs] = await Promise.all([getWheelConfig(db), getAllCustomers(db)]);
       setConfig(cfg);
       setEditedPrizes(cfg.prizes.map((p) => ({ ...p })));
+      setCustomTerms(cfg.customTerms || '');
       setCustomers(custs);
       setLoading(false);
     })();
@@ -46,8 +48,8 @@ export default function ManagerDashboard() {
     setSaveMsg(null);
     try {
       const { db } = initFirebase();
-      await saveWheelConfig(db, editedPrizes, user.email);
-      setConfig((prev) => prev ? { ...prev, prizes: editedPrizes } : prev);
+      await saveWheelConfig(db, editedPrizes, user.email, customTerms);
+      setConfig((prev) => prev ? { ...prev, prizes: editedPrizes, customTerms } : prev);
       setSaveMsg('Configuration saved successfully.');
     } catch {
       setSaveMsg('Error saving configuration. Please try again.');
@@ -55,7 +57,7 @@ export default function ManagerDashboard() {
       setSaving(false);
       setTimeout(() => setSaveMsg(null), 4000);
     }
-  }, [user, editedPrizes]);
+  }, [user, editedPrizes, customTerms]);
 
   const handleSort = useCallback((field: keyof Customer) => {
     setSortField((prev) => {
@@ -202,6 +204,28 @@ export default function ManagerDashboard() {
               })}
             </tbody>
           </table>
+        </div>
+      </section>
+
+      {/* Terms and Conditions Editor */}
+      <section style={{ marginBottom: '40px' }}>
+        <div style={{ marginBottom: '12px' }}>
+          <h2 style={{ color: 'var(--color-gold)', fontSize: '0.9rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>
+            Legal Terms & Conditions Editor
+          </h2>
+          <p style={{ color: 'var(--color-text-dim)', fontSize: '0.72rem', margin: '4px 0 0' }}>
+            Managers can edit legal policy text displayed on the /terms page. Leave blank to use default policy.
+          </p>
+        </div>
+        <div className="glass" style={{ padding: '20px', borderRadius: '8px' }}>
+          <textarea
+            value={customTerms}
+            onChange={(e) => setCustomTerms(e.target.value)}
+            className="input-base"
+            placeholder="Enter custom terms and conditions text..."
+            rows={10}
+            style={{ resize: 'vertical', lineHeight: '1.6', fontFamily: 'var(--font-mono)' }}
+          />
         </div>
       </section>
 

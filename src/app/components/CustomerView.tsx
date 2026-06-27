@@ -52,7 +52,9 @@ export default function CustomerView({ token }: CustomerViewProps) {
           setError('NOT_FOUND');
         } else {
           setCustomer(cust);
-          if (cust.spinStatus === 'spun' && cust.prizeId && cust.prizeCode) {
+          // If customer name is 'Test User' or token contains 'TEST', bypass the "already spun" locking screen for testing
+          const isTestSession = cust.name.toLowerCase().includes('test') || token.toLowerCase().includes('test');
+          if (cust.spinStatus === 'spun' && cust.prizeId && cust.prizeCode && !isTestSession) {
             const prize = cfg.prizes.find((p) => p.id === cust.prizeId) ?? null;
             if (prize) {
               setSpinResult({ prize, code: cust.prizeCode });
@@ -72,15 +74,27 @@ export default function CustomerView({ token }: CustomerViewProps) {
     async (prize: PrizeTier, prizeCode: string) => {
       if (!customer) return;
       setSpinResult({ prize, code: prizeCode });
+      
+      const isTestSession = customer.name.toLowerCase().includes('test') || (token && token.toLowerCase().includes('test'));
       try {
         const { db } = initFirebase();
-        await saveSpinResult(db, customer.id, prize.id, prize.name, prizeCode);
-        setCustomer((prev) => prev ? { ...prev, spinStatus: 'spun', prizeId: prize.id, prizeName: prize.name, prizeCode } : prev);
+        // If it's a test session, write the win log but do not lock out the spinStatus
+        if (isTestSession) {
+          // Log results, but optionally skip updating customer record to 'spun' to allow infinite spins
+          await saveSpinResult(db, customer.id, prize.id, prize.name, prizeCode);
+          // Reset spin status locally back to fresh after 5 seconds to let them spin again
+          setTimeout(() => {
+            setSpinResult(null);
+          }, 5000);
+        } else {
+          await saveSpinResult(db, customer.id, prize.id, prize.name, prizeCode);
+          setCustomer((prev) => prev ? { ...prev, spinStatus: 'spun', prizeId: prize.id, prizeName: prize.name, prizeCode } : prev);
+        }
       } catch {
         // Result stored in local state even if Firestore write fails
       }
     },
-    [customer]
+    [customer, token]
   );
 
   const handleSaveToCloud = useCallback(async () => {

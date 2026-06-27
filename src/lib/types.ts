@@ -13,6 +13,7 @@ export interface WheelConfig {
   prizes: PrizeTier[];
   updatedAt: string;
   updatedByEmail: string;
+  customTerms?: string;
 }
 
 export interface Customer {

@@ -69,18 +69,18 @@ export default function SpinWheel({ prizes, onSpinComplete, disabled }: SpinWhee
 
   const totalWeight = prizes.reduce((s, p) => s + p.weight, 0);
 
-  // Build segment angles
+  // Build segments with equal visual size (360 degrees divided by total prizes)
   const segments: { prize: PrizeTier; startAngle: number; endAngle: number; midAngle: number }[] = [];
+  const equalSpan = 360 / prizes.length;
   let angle = 0;
   for (const prize of prizes) {
-    const span = (prize.weight / totalWeight) * 360;
     segments.push({
       prize,
       startAngle: angle,
-      endAngle: angle + span,
-      midAngle: angle + span / 2,
+      endAngle: angle + equalSpan,
+      midAngle: angle + equalSpan / 2,
     });
-    angle += span;
+    angle += equalSpan;
   }
 
   const handleSpin = useCallback(() => {
@@ -180,13 +180,13 @@ export default function SpinWheel({ prizes, onSpinComplete, disabled }: SpinWhee
                     textAnchor="middle"
                     dominantBaseline="middle"
                     style={{
-                      fontSize: prizes.length > 6 ? '9px' : '11px',
+                      fontSize: prizes.length > 6 ? '11px' : '13px',
                       fontFamily: 'JetBrains Mono, monospace',
-                      fontWeight: 700,
+                      fontWeight: 800,
                       fill: '#F0EDE8',
                       paintOrder: 'stroke',
-                      stroke: 'rgba(0,0,0,0.5)',
-                      strokeWidth: '3px',
+                      stroke: 'rgba(0,0,0,0.6)',
+                      strokeWidth: '4px',
                     }}
                   >
                     {seg.prize.emoji}
@@ -194,15 +194,15 @@ export default function SpinWheel({ prizes, onSpinComplete, disabled }: SpinWhee
                   <text
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    dy="14"
+                    dy="16"
                     style={{
-                      fontSize: prizes.length > 6 ? '7px' : '9px',
+                      fontSize: prizes.length > 6 ? '8.5px' : '10.5px',
                       fontFamily: 'JetBrains Mono, monospace',
-                      fontWeight: 600,
+                      fontWeight: 700,
                       fill: '#F0EDE8',
                       paintOrder: 'stroke',
-                      stroke: 'rgba(0,0,0,0.6)',
-                      strokeWidth: '2px',
+                      stroke: 'rgba(0,0,0,0.7)',
+                      strokeWidth: '3px',
                     }}
                   >
                     {seg.prize.name.length > 14 ? seg.prize.name.substring(0, 13) + '…' : seg.prize.name}
