@@ -175,7 +175,7 @@ export default function CustomerView({ token }: CustomerViewProps) {
   // ─── Already Spun — Show Result ───────────────────────────────────────────────
   if (customer.spinStatus === 'spun' && spinResult) {
     return (
-      <div className="animate-fade-in" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', padding: '32px', maxWidth: '1100px', margin: '0 auto' }}>
+      <div className="animate-fade-in grid-two-col" style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
         <WheelPanel prizes={config.prizes} disabled={true} onSpinComplete={() => void 0} alreadySpun />
         <ResultCard
           customer={customer}
@@ -353,26 +353,28 @@ function ResultCard({
 
       {!isLoser && (
         <>
-          {/* Validation code */}
+          {/* Validation code - massive and readable on mobile */}
           <div
             style={{
               background: 'var(--color-charcoal)',
-              border: '1px solid var(--color-gold-dim)',
+              border: '2px solid var(--color-gold-dim)',
               borderRadius: '6px',
-              padding: '16px',
+              padding: '24px 16px',
               textAlign: 'center',
               margin: '0 0 16px',
             }}
           >
-            <p style={{ color: 'var(--color-text-dim)', fontSize: '0.65rem', letterSpacing: '0.15em', textTransform: 'uppercase', margin: '0 0 8px' }}>
+            <p style={{ color: 'var(--color-text-dim)', fontSize: '0.7rem', letterSpacing: '0.15em', textTransform: 'uppercase', margin: '0 0 8px' }}>
               Validation Code
             </p>
             <p style={{
               color: 'var(--color-gold)',
-              fontSize: '1.3rem',
+              fontSize: 'min(2.5rem, 8vw)',
               fontWeight: 800,
-              letterSpacing: '0.12em',
+              letterSpacing: '0.08em',
               margin: 0,
+              wordBreak: 'break-all',
+              lineHeight: 1.1
             }}>
               {spinResult.code}
             </p>
