@@ -214,8 +214,15 @@ export default function ManagerDashboard() {
                         title="-1 = unlimited"
                       />
                     </td>
-                    <td style={{ maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--color-text-dim)', fontSize: '0.72rem' }}>
-                      {prize.terms}
+                    <td>
+                      <input
+                        type="text"
+                        value={prize.terms}
+                        onChange={(e) => handlePrizeChange(prize.id, 'terms', e.target.value)}
+                        className="input-base"
+                        style={{ padding: '6px 10px', fontSize: '0.8rem', minWidth: '240px' }}
+                        aria-label={`Terms for prize ${prize.id}`}
+                      />
                     </td>
                   </tr>
                 );
