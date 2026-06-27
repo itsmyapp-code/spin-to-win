@@ -180,7 +180,7 @@ export default function SpinWheel({ prizes, onSpinComplete, disabled }: SpinWhee
                     textAnchor="middle"
                     dominantBaseline="middle"
                     style={{
-                      fontSize: '20px',
+                      fontSize: '32px',
                       fill: '#F0EDE8',
                       paintOrder: 'stroke',
                       stroke: 'rgba(0,0,0,0.6)',
@@ -192,15 +192,15 @@ export default function SpinWheel({ prizes, onSpinComplete, disabled }: SpinWhee
                   <text
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    dy="22"
+                    dy="32"
                     style={{
-                      fontSize: '11px',
+                      fontSize: '16px',
                       fontFamily: 'JetBrains Mono, monospace',
                       fontWeight: 800,
                       fill: 'var(--color-gold-bright)',
                       paintOrder: 'stroke',
                       stroke: 'rgba(0,0,0,0.8)',
-                      strokeWidth: '3px',
+                      strokeWidth: '4px',
                     }}
                   >
                     {seg.prize.id}
