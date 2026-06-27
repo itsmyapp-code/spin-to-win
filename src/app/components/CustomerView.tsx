@@ -278,13 +278,31 @@ function WheelPanel({
   alreadySpun: boolean;
 }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', width: '100%' }}>
       {alreadySpun && (
         <div className="badge-gold" style={{ alignSelf: 'flex-start' }}>
           Already Spun — Result Recorded
         </div>
       )}
       <SpinWheel prizes={prizes} onSpinComplete={onSpinComplete} disabled={disabled} />
+
+      {/* Clean Prize Legend */}
+      <div className="glass" style={{ width: '100%', padding: '16px', borderRadius: '8px', marginTop: '12px' }}>
+        <p style={{ color: 'var(--color-gold)', fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', margin: '0 0 12px' }}>
+          🎯 Prize Legend
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {prizes.map((p) => (
+            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.78rem' }}>
+              <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: p.colour, flexShrink: 0 }} />
+              <strong style={{ color: 'var(--color-gold-bright)', minWidth: '24px' }}>{p.id}</strong>
+              <span>{p.emoji}</span>
+              <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{p.name}</span>
+              <span className="hide-mobile" style={{ color: 'var(--color-text-dim)', fontSize: '0.7rem', marginLeft: 'auto' }}>{p.description}</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

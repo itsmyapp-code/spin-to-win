@@ -174,15 +174,13 @@ export default function SpinWheel({ prizes, onSpinComplete, disabled }: SpinWhee
                   d={buildSegmentPath(seg.startAngle, seg.endAngle)}
                   fill={i % 2 === 0 ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.12)'}
                 />
-                {/* Label */}
+                {/* Label - simple and large for high readability */}
                 <g transform={buildLabelTransform(seg.midAngle)}>
                   <text
                     textAnchor="middle"
                     dominantBaseline="middle"
                     style={{
-                      fontSize: prizes.length > 6 ? '11px' : '13px',
-                      fontFamily: 'JetBrains Mono, monospace',
-                      fontWeight: 800,
+                      fontSize: '20px',
                       fill: '#F0EDE8',
                       paintOrder: 'stroke',
                       stroke: 'rgba(0,0,0,0.6)',
@@ -194,18 +192,18 @@ export default function SpinWheel({ prizes, onSpinComplete, disabled }: SpinWhee
                   <text
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    dy="16"
+                    dy="22"
                     style={{
-                      fontSize: prizes.length > 6 ? '8.5px' : '10.5px',
+                      fontSize: '11px',
                       fontFamily: 'JetBrains Mono, monospace',
-                      fontWeight: 700,
-                      fill: '#F0EDE8',
+                      fontWeight: 800,
+                      fill: 'var(--color-gold-bright)',
                       paintOrder: 'stroke',
-                      stroke: 'rgba(0,0,0,0.7)',
+                      stroke: 'rgba(0,0,0,0.8)',
                       strokeWidth: '3px',
                     }}
                   >
-                    {seg.prize.name.length > 14 ? seg.prize.name.substring(0, 13) + '…' : seg.prize.name}
+                    {seg.prize.id}
                   </text>
                 </g>
               </g>
