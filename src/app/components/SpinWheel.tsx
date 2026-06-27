@@ -128,7 +128,7 @@ export default function SpinWheel({ prizes, onSpinComplete, disabled }: SpinWhee
         {/* SVG Wheel - fills container width, aspect ratio preserved by viewBox */}
         <svg
           width="100%"
-          height="auto"
+          height="100%"
           viewBox={`0 0 ${SIZE} ${SIZE}`}
           aria-label="Prize spin wheel"
           style={{ display: 'block', filter: 'drop-shadow(0 8px 32px rgba(0,0,0,0.6))' }}
