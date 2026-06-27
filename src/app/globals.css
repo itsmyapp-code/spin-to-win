@@ -40,8 +40,8 @@
 }
 
 html {
-  min-width: 1280px;
   scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -390,4 +390,129 @@ body {
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
+}
+
+/* ─── Responsive Layout Utilities ───────────────────────────────────────────────────────── */
+
+/* Two-column grid that stacks on mobile */
+.grid-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+}
+
+/* Four-column metric grid */
+.grid-four-col {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+/* Wheel wrapper - scales the SVG on small screens */
+.wheel-scaler {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  width: 100%;
+}
+
+.wheel-scaler > div:first-child {
+  width: min(560px, 90vw);
+  height: min(560px, 90vw);
+}
+
+/* Mobile-first tab bar in header */
+.role-tab-bar {
+  display: flex;
+  gap: 2px;
+  background: var(--color-charcoal);
+  padding: 4px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+.role-tab-bar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Customer-only header (no tabs) */
+.header-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 64px;
+  padding: 0 20px;
+}
+
+/* ─── Mobile breakpoints ─────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .grid-two-col {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .grid-four-col {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .hide-mobile {
+    display: none !important;
+  }
+
+  .header-inner {
+    height: auto;
+    min-height: 56px;
+    padding: 10px 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .btn-gold,
+  .btn-ghost,
+  .btn-sage {
+    font-size: 0.75rem;
+    padding: 10px 16px;
+  }
+}
+
+@media (max-width: 600px) {
+  .grid-four-col {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .header-inner {
+    padding: 8px 12px;
+  }
+
+  /* Stack result card voucher actions */
+  .voucher-actions {
+    flex-direction: column;
+  }
+
+  /* Full-width spin button on mobile */
+  #spin-button {
+    width: 100%;
+    font-size: 0.9rem;
+    padding: 14px 24px;
+  }
+
+  /* Compact manager panels */
+  .manager-content {
+    padding: 16px;
+  }
+
+  /* Admin two-col becomes single */
+  .admin-grid {
+    grid-template-columns: 1fr !important;
+  }
 }

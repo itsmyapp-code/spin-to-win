@@ -178,7 +178,7 @@ export default function CustomerView({ token }: CustomerViewProps) {
 
   // ─── Fresh Spin ──────────────────────────────────────────────────────────────
   return (
-    <div className="animate-fade-in" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', padding: '32px', maxWidth: '1100px', margin: '0 auto' }}>
+    <div className="animate-fade-in grid-two-col" style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
       {/* Left: Wheel */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {/* Welcome */}
@@ -371,7 +371,7 @@ function ResultCard({
           </div>
 
           {/* Action buttons */}
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div className="voucher-actions" style={{ display: 'flex', gap: '10px' }}>
             <button
               id="save-to-cloud-btn"
               onClick={onSave}

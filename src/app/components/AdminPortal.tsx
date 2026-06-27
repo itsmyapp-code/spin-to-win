@@ -5,6 +5,7 @@ import { useAuth } from './AuthContext';
 import { initFirebase } from '@/lib/firebase';
 import { bulkCreateCustomers } from '@/lib/firestoreOps';
 import type { Customer } from '@/lib/types';
+import StaffAuthForm from './StaffAuthForm';
 function generateToken(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
@@ -42,19 +43,13 @@ function buildCustomer(name: string, email: string, baseUrl: string): Customer &
 }
 
 export default function AdminPortal() {
-  const { user, staffRole, signInAsStaff, authError, authLoading } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const { user, staffRole } = useAuth();
   const [csvInput, setCsvInput] = useState('');
   const [parsed, setParsed] = useState<(Customer & { tokenUrl: string })[]>([]);
   const [parseError, setParseError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<string | null>(null);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await signInAsStaff(email, password);
-  };
 
   const handleParse = useCallback(() => {
     setParseError(null);
@@ -97,31 +92,11 @@ export default function AdminPortal() {
   // ─── Auth gate ────────────────────────────────────────────────────────────────
   if (!user || user.isAnonymous || !staffRole || staffRole.role !== 'admin') {
     return (
-      <div className="animate-fade-in" style={{ maxWidth: '440px', margin: '80px auto', padding: '0 24px' }}>
-        <div className="glass" style={{ padding: '40px', borderRadius: '8px' }}>
-          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-            <div style={{ fontSize: '2rem', marginBottom: '10px' }}>⚙️</div>
-            <h2 style={{ color: 'var(--color-gold)', fontSize: '1rem', letterSpacing: '0.1em', margin: '0 0 6px' }}>
-              ADMIN PORTAL
-            </h2>
-            <p style={{ color: 'var(--color-text-dim)', fontSize: '0.75rem', margin: 0 }}>Admin access required</p>
-          </div>
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div>
-              <label htmlFor="admin-email" style={{ display: 'block', color: 'var(--color-text-secondary)', fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }}>Email</label>
-              <input id="admin-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="input-base" required />
-            </div>
-            <div>
-              <label htmlFor="admin-password" style={{ display: 'block', color: 'var(--color-text-secondary)', fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }}>Password</label>
-              <input id="admin-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="input-base" required />
-            </div>
-            {authError && <p style={{ color: 'var(--color-crimson)', fontSize: '0.76rem', margin: 0 }}>{authError}</p>}
-            <button type="submit" id="admin-login-btn" disabled={authLoading} className="btn-gold" style={{ width: '100%' }}>
-              {authLoading ? 'SIGNING IN…' : 'SIGN IN'}
-            </button>
-          </form>
-        </div>
-      </div>
+      <StaffAuthForm
+        title="ADMIN PORTAL"
+        icon="⚙️"
+        subtitle="Admin access required"
+      />
     );
   }
 
@@ -137,7 +112,7 @@ export default function AdminPortal() {
         </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'start' }}>
+      <div className="admin-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'start' }}>
         {/* Left: Input */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div className="glass" style={{ padding: '24px', borderRadius: '8px' }}>

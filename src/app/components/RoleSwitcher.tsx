@@ -20,14 +20,7 @@ export default function RoleSwitcher({ active, onChange }: RoleSwitcherProps) {
     <div
       role="tablist"
       aria-label="Application role switcher"
-      style={{
-        display: 'flex',
-        gap: '2px',
-        background: 'var(--color-charcoal)',
-        padding: '4px',
-        borderRadius: '6px',
-        border: '1px solid var(--color-border)',
-      }}
+      className="role-tab-bar"
     >
       {TABS.map((tab) => {
         const isActive = active === tab.id;

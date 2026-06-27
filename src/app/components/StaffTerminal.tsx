@@ -5,6 +5,7 @@ import { useAuth } from './AuthContext';
 import { initFirebase } from '@/lib/firebase';
 import { getCustomerByCode, burnVoucher } from '@/lib/firestoreOps';
 import type { Customer, VerifyState } from '@/lib/types';
+import StaffAuthForm from './StaffAuthForm';
 
 function formatCode(raw: string): string {
   const cleaned = raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -16,22 +17,13 @@ function formatCode(raw: string): string {
 }
 
 export default function StaffTerminal() {
-  const { user, staffRole, signInAsStaff, authError, authLoading } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const { user, staffRole } = useAuth();
   const [codeInput, setCodeInput] = useState('');
   const [verifyState, setVerifyState] = useState<VerifyState>('idle');
   const [foundCustomer, setFoundCustomer] = useState<Customer | null>(null);
   const [burning, setBurning] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleLogin = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      await signInAsStaff(email, password);
-    },
-    [email, password, signInAsStaff]
-  );
 
   const handleCodeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatCode(e.target.value);
@@ -93,68 +85,11 @@ export default function StaffTerminal() {
   // ─── Auth Gate ────────────────────────────────────────────────────────────────
   if (!user || user.isAnonymous || !staffRole) {
     return (
-      <div className="animate-fade-in" style={{ maxWidth: '440px', margin: '80px auto', padding: '0 24px' }}>
-        <div className="glass" style={{ padding: '40px', borderRadius: '8px' }}>
-          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-            <div style={{ fontSize: '2rem', marginBottom: '10px' }}>🏷️</div>
-            <h2 style={{ color: 'var(--color-gold)', fontSize: '1rem', letterSpacing: '0.1em', margin: '0 0 6px' }}>
-              STAFF TERMINAL
-            </h2>
-            <p style={{ color: 'var(--color-text-dim)', fontSize: '0.75rem', margin: 0 }}>
-              Authorised personnel only
-            </p>
-          </div>
-
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div>
-              <label htmlFor="staff-email" style={{ display: 'block', color: 'var(--color-text-secondary)', fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }}>
-                Email Address
-              </label>
-              <input
-                id="staff-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="input-base"
-                placeholder="staff@sevenstars.pub"
-                required
-                autoComplete="email"
-              />
-            </div>
-            <div>
-              <label htmlFor="staff-password" style={{ display: 'block', color: 'var(--color-text-secondary)', fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }}>
-                Password
-              </label>
-              <input
-                id="staff-password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="input-base"
-                placeholder="••••••••"
-                required
-                autoComplete="current-password"
-              />
-            </div>
-
-            {authError && (
-              <div className="badge-error" style={{ padding: '8px 12px', borderRadius: '4px', fontSize: '0.76rem', display: 'block' }}>
-                {authError}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              id="staff-login-btn"
-              disabled={authLoading}
-              className="btn-gold"
-              style={{ marginTop: '8px', width: '100%' }}
-            >
-              {authLoading ? 'SIGNING IN…' : 'SIGN IN'}
-            </button>
-          </form>
-        </div>
-      </div>
+      <StaffAuthForm
+        title="STAFF TERMINAL"
+        icon="🏷️"
+        subtitle="Authorised personnel only"
+      />
     );
   }
 

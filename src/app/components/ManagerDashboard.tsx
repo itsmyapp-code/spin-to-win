@@ -5,11 +5,10 @@ import { useAuth } from './AuthContext';
 import { initFirebase } from '@/lib/firebase';
 import { getWheelConfig, saveWheelConfig, getAllCustomers } from '@/lib/firestoreOps';
 import type { WheelConfig, PrizeTier, Customer } from '@/lib/types';
+import StaffAuthForm from './StaffAuthForm';
 
 export default function ManagerDashboard() {
-  const { user, staffRole, signInAsStaff, authError, authLoading } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const { user, staffRole } = useAuth();
   const [config, setConfig] = useState<WheelConfig | null>(null);
   const [editedPrizes, setEditedPrizes] = useState<PrizeTier[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -31,10 +30,6 @@ export default function ManagerDashboard() {
     })();
   }, [user, staffRole]);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await signInAsStaff(email, password);
-  };
 
   const handlePrizeChange = useCallback(
     (id: string, field: keyof PrizeTier, value: string | number) => {
@@ -84,31 +79,11 @@ export default function ManagerDashboard() {
   // ─── Auth gate ────────────────────────────────────────────────────────────────
   if (!user || user.isAnonymous || !staffRole || staffRole.role === 'staff') {
     return (
-      <div className="animate-fade-in" style={{ maxWidth: '440px', margin: '80px auto', padding: '0 24px' }}>
-        <div className="glass" style={{ padding: '40px', borderRadius: '8px' }}>
-          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-            <div style={{ fontSize: '2rem', marginBottom: '10px' }}>📊</div>
-            <h2 style={{ color: 'var(--color-gold)', fontSize: '1rem', letterSpacing: '0.1em', margin: '0 0 6px' }}>
-              MANAGER DASHBOARD
-            </h2>
-            <p style={{ color: 'var(--color-text-dim)', fontSize: '0.75rem', margin: 0 }}>Manager or Admin access required</p>
-          </div>
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div>
-              <label htmlFor="mgr-email" style={{ display: 'block', color: 'var(--color-text-secondary)', fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }}>Email</label>
-              <input id="mgr-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="input-base" required />
-            </div>
-            <div>
-              <label htmlFor="mgr-password" style={{ display: 'block', color: 'var(--color-text-secondary)', fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }}>Password</label>
-              <input id="mgr-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="input-base" required />
-            </div>
-            {authError && <p style={{ color: 'var(--color-crimson)', fontSize: '0.76rem', margin: 0 }}>{authError}</p>}
-            <button type="submit" id="mgr-login-btn" disabled={authLoading} className="btn-gold" style={{ width: '100%' }}>
-              {authLoading ? 'SIGNING IN…' : 'SIGN IN'}
-            </button>
-          </form>
-        </div>
-      </div>
+      <StaffAuthForm
+        title="MANAGER DASHBOARD"
+        icon="📊"
+        subtitle="Manager or Admin access required"
+      />
     );
   }
 
@@ -119,10 +94,10 @@ export default function ManagerDashboard() {
   const totalWeight = editedPrizes.reduce((s, p) => s + p.weight, 0);
 
   return (
-    <div className="animate-fade-in" style={{ padding: '24px 32px', maxWidth: '1400px', margin: '0 auto' }}>
+    <div className="manager-content" style={{ padding: '24px 32px', maxWidth: '1400px', margin: '0 auto' }}>
 
       {/* Metric tally boxes */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
+      <div className="grid-four-col">
         <MetricBox label="Total Customers" value={String(customers.length)} icon="👥" />
         <MetricBox label="Total Spun" value={String(totalSpun)} icon="🎡" />
         <MetricBox label="Unclaimed Outstanding" value={String(unclaimed)} icon="⏳" accent="gold" />

@@ -111,8 +111,8 @@ export default function SpinWheel({ prizes, onSpinComplete, disabled }: SpinWhee
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px' }}>
-      {/* Wheel container */}
-      <div style={{ position: 'relative', width: SIZE, height: SIZE }}>
+      {/* Wheel container - auto-scales via CSS */}
+      <div style={{ position: 'relative', width: '100%', maxWidth: `${SIZE}px` }}>
         {/* Outer glow ring */}
         <div
           aria-hidden="true"
@@ -125,10 +125,10 @@ export default function SpinWheel({ prizes, onSpinComplete, disabled }: SpinWhee
           }}
         />
 
-        {/* SVG Wheel */}
+        {/* SVG Wheel - fills container width, aspect ratio preserved by viewBox */}
         <svg
-          width={SIZE}
-          height={SIZE}
+          width="100%"
+          height="auto"
           viewBox={`0 0 ${SIZE} ${SIZE}`}
           aria-label="Prize spin wheel"
           style={{ display: 'block', filter: 'drop-shadow(0 8px 32px rgba(0,0,0,0.6))' }}

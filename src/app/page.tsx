@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import RoleSwitcher from './components/RoleSwitcher';
 import CustomerView from './components/CustomerView';
@@ -12,7 +12,9 @@ import type { ActiveView } from '@/lib/types';
 function HubContent() {
   const searchParams = useSearchParams();
   const tokenParam = searchParams.get('token');
-  const [activeView, setActiveView] = useState<ActiveView>(tokenParam ? 'customer' : 'customer');
+  // If customer has a token, lock to customer view and hide the menu entirely
+  const isCustomerOnlyMode = Boolean(tokenParam);
+  const [activeView, setActiveView] = useState<ActiveView>('customer');
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
@@ -22,57 +24,59 @@ function HubContent() {
           position: 'sticky',
           top: 0,
           zIndex: 40,
-          background: 'rgba(7,7,10,0.96)',
+          background: 'rgba(7,7,10,0.97)',
           backdropFilter: 'blur(20px)',
           borderBottom: '1px solid rgba(197,168,107,0.15)',
-          padding: '0 32px',
         }}
       >
-        <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '24px', height: '64px' }}>
+        <div className="header-inner">
           {/* Branding */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-            <div
-              aria-hidden="true"
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+            {/* SVG Logo */}
+            <img
+              src="/QIMonogram.svg"
+              alt="The Seven Stars"
+              width={36}
+              height={36}
               style={{
                 width: '36px',
                 height: '36px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #C5A86B, #8B7447)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '1rem',
-                fontWeight: 800,
-                color: '#07070A',
                 flexShrink: 0,
-                boxShadow: '0 0 12px rgba(197,168,107,0.3)',
+                filter: 'drop-shadow(0 0 8px rgba(197,168,107,0.4))',
               }}
-            >
-              7★
-            </div>
+            />
             <div style={{ lineHeight: 1 }}>
-              <p style={{ color: 'var(--color-gold)', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', margin: 0 }}>
+              <p style={{ color: 'var(--color-gold)', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', margin: 0, whiteSpace: 'nowrap' }}>
                 The Seven Stars
               </p>
-              <p style={{ color: 'var(--color-text-dim)', fontSize: '0.62rem', letterSpacing: '0.08em', margin: 0 }}>
+              <p className="hide-mobile" style={{ color: 'var(--color-text-dim)', fontSize: '0.62rem', letterSpacing: '0.08em', margin: 0 }}>
                 Promotional Spin Hub
               </p>
             </div>
           </div>
 
-          {/* Divider */}
-          <div style={{ width: '1px', height: '32px', background: 'var(--color-border)', flexShrink: 0 }} />
+          {/* Divider - hidden on mobile */}
+          {!isCustomerOnlyMode && (
+            <div className="hide-mobile" style={{ width: '1px', height: '32px', background: 'var(--color-border)', flexShrink: 0 }} />
+          )}
 
-          {/* Role switcher */}
-          <RoleSwitcher active={activeView} onChange={setActiveView} />
+          {/* Role switcher — only show to staff/manager/admin, not to customers arriving via token */}
+          {!isCustomerOnlyMode && (
+            <RoleSwitcher active={activeView} onChange={setActiveView} />
+          )}
+
+          {/* Customer-mode label */}
+          {isCustomerOnlyMode && (
+            <span className="badge-gold" style={{ fontSize: '0.62rem' }}>Spin Session</span>
+          )}
 
           {/* Spacer */}
           <div style={{ flex: 1 }} />
 
-          {/* Status indicator */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--color-sage)', animation: 'pulseGold 2s ease-in-out infinite' }} />
-            <span style={{ color: 'var(--color-text-dim)', fontSize: '0.65rem', letterSpacing: '0.1em' }}>LIVE</span>
+          {/* Live indicator */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--color-sage)' }} />
+            <span className="hide-mobile" style={{ color: 'var(--color-text-dim)', fontSize: '0.65rem', letterSpacing: '0.1em' }}>LIVE</span>
           </div>
         </div>
       </header>
@@ -95,69 +99,63 @@ function HubContent() {
           }}
         />
 
-        {/* View panels */}
+        {/* Customer panel — always rendered when token present */}
         <div
-          id={`panel-customer`}
+          id="panel-customer"
           role="tabpanel"
           aria-labelledby="tab-customer"
-          style={{ display: activeView === 'customer' ? 'block' : 'none', position: 'relative', zIndex: 1 }}
+          style={{ display: (isCustomerOnlyMode || activeView === 'customer') ? 'block' : 'none', position: 'relative', zIndex: 1 }}
         >
           <CustomerView token={tokenParam} />
         </div>
 
-        <div
-          id={`panel-staff`}
-          role="tabpanel"
-          aria-labelledby="tab-staff"
-          style={{ display: activeView === 'staff' ? 'block' : 'none', position: 'relative', zIndex: 1 }}
-        >
-          <StaffTerminal />
-        </div>
+        {!isCustomerOnlyMode && (
+          <>
+            <div
+              id="panel-staff"
+              role="tabpanel"
+              aria-labelledby="tab-staff"
+              style={{ display: activeView === 'staff' ? 'block' : 'none', position: 'relative', zIndex: 1 }}
+            >
+              <StaffTerminal />
+            </div>
 
-        <div
-          id={`panel-manager`}
-          role="tabpanel"
-          aria-labelledby="tab-manager"
-          style={{ display: activeView === 'manager' ? 'block' : 'none', position: 'relative', zIndex: 1 }}
-        >
-          <ManagerDashboard />
-        </div>
+            <div
+              id="panel-manager"
+              role="tabpanel"
+              aria-labelledby="tab-manager"
+              style={{ display: activeView === 'manager' ? 'block' : 'none', position: 'relative', zIndex: 1 }}
+            >
+              <ManagerDashboard />
+            </div>
 
-        <div
-          id={`panel-admin`}
-          role="tabpanel"
-          aria-labelledby="tab-admin"
-          style={{ display: activeView === 'admin' ? 'block' : 'none', position: 'relative', zIndex: 1 }}
-        >
-          <AdminPortal />
-        </div>
+            <div
+              id="panel-admin"
+              role="tabpanel"
+              aria-labelledby="tab-admin"
+              style={{ display: activeView === 'admin' ? 'block' : 'none', position: 'relative', zIndex: 1 }}
+            >
+              <AdminPortal />
+            </div>
+          </>
+        )}
       </main>
 
       {/* ── Footer ───────────────────────────────────────────────────────────── */}
       <footer
         style={{
           borderTop: '1px solid var(--color-border-dim)',
-          padding: '16px 32px',
+          padding: '14px 20px',
           background: 'var(--color-charcoal)',
           position: 'relative',
           zIndex: 2,
         }}
       >
-        <div
-          style={{
-            maxWidth: '1400px',
-            margin: '0 auto',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '8px',
-          }}
-        >
-          <p style={{ color: 'var(--color-text-dim)', fontSize: '0.68rem', margin: 0, letterSpacing: '0.05em' }}>
-            © {new Date().getFullYear()} The Seven Stars · All rights reserved · No cookies · Zero telemetry
+        <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+          <p style={{ color: 'var(--color-text-dim)', fontSize: '0.65rem', margin: 0 }}>
+            © {new Date().getFullYear()} The Seven Stars · No cookies · Zero telemetry
           </p>
-          <nav aria-label="Legal links" style={{ display: 'flex', gap: '20px' }}>
+          <nav aria-label="Legal links" style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
             {[
               { href: '/terms', label: 'Terms' },
               { href: '/privacy', label: 'Privacy' },
@@ -167,13 +165,7 @@ function HubContent() {
               <a
                 key={href}
                 href={href}
-                style={{
-                  color: 'var(--color-text-dim)',
-                  fontSize: '0.68rem',
-                  textDecoration: 'none',
-                  letterSpacing: '0.05em',
-                  transition: 'color 0.2s',
-                }}
+                style={{ color: 'var(--color-text-dim)', fontSize: '0.65rem', textDecoration: 'none', transition: 'color 0.2s' }}
                 onMouseEnter={(e) => { (e.target as HTMLAnchorElement).style.color = 'var(--color-gold)'; }}
                 onMouseLeave={(e) => { (e.target as HTMLAnchorElement).style.color = 'var(--color-text-dim)'; }}
               >
