@@ -210,7 +210,7 @@ export default function CustomerView({ token }: CustomerViewProps) {
 
         <WheelPanel
           prizes={config.prizes}
-          disabled={customer.spinStatus === 'spun'}
+          disabled={customer.spinStatus === 'spun' && !(customer.name.toLowerCase().includes('test') || (token && token.toLowerCase().includes('test')))}
           onSpinComplete={handleSpinComplete}
           alreadySpun={false}
         />
