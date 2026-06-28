@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import { initFirebase } from '@/lib/firebase';
 import { getWheelConfig, saveWheelConfig } from '@/lib/firestoreOps';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import type { WheelConfig, PrizeTier, Customer } from '@/lib/types';
 import StaffAuthForm from './StaffAuthForm';
 
@@ -76,6 +76,20 @@ export default function ManagerDashboard() {
       setTimeout(() => setSaveMsg(null), 4000);
     }
   }, [user, editedPrizes, customTerms]);
+
+  const handleGrantExtraSpin = useCallback(async (c: Customer) => {
+    const newAllowed = (c.allowedSpins ?? 1) + 1;
+    const newStatus = (c.spinsCount ?? 0) < newAllowed ? 'fresh' : 'spun';
+    try {
+      const { db } = initFirebase();
+      await updateDoc(doc(db, 'spinCustomers', c.id), {
+        allowedSpins: newAllowed,
+        spinStatus: newStatus,
+      });
+    } catch (e) {
+      console.error('Error updating allowedSpins:', e);
+    }
+  }, []);
 
   const handleSort = useCallback((field: keyof Customer) => {
     setSortField((prev) => {
@@ -284,22 +298,25 @@ export default function ManagerDashboard() {
         </div>
 
         <div className="glass" style={{ borderRadius: '8px', overflow: 'auto' }}>
-          <table className="data-table" style={{ minWidth: '900px' }}>
+          <table className="data-table" style={{ minWidth: '1000px' }}>
             <thead>
               <tr>
                 <SortableHeader label="Full Name" field="name" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
                 <SortableHeader label="Email" field="email" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
                 <SortableHeader label="Token / Spin URL" field="token" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
                 <SortableHeader label="Status" field="spinStatus" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
-                <SortableHeader label="Prize" field="prizeName" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                <th>Allowed</th>
+                <th>Spun</th>
+                <SortableHeader label="Latest Prize" field="prizeName" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
                 <th>Code</th>
                 <SortableHeader label="Redemption" field="redeemedAt" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {sorted.length === 0 && (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', color: 'var(--color-text-dim)', padding: '32px', fontSize: '0.8rem' }}>
+                  <td colSpan={10} style={{ textAlign: 'center', color: 'var(--color-text-dim)', padding: '32px', fontSize: '0.8rem' }}>
                     No customers registered yet. Use the Admin Portal to import customers.
                   </td>
                 </tr>
@@ -308,68 +325,114 @@ export default function ManagerDashboard() {
                 const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
                 const spinUrl = `${baseUrl}/?token=${c.token}`;
                 return (
-                  <tr key={c.id}>
-                    <td style={{ fontWeight: 600 }}>{c.name}</td>
-                    <td style={{ color: 'var(--color-text-secondary)' }}>{c.email}</td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <code style={{ fontSize: '0.72rem', color: 'var(--color-gold)', letterSpacing: '0.05em', fontWeight: 'bold' }}>{c.token}</code>
-                        <a
-                          href={spinUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            color: 'var(--color-sage)',
-                            fontSize: '0.68rem',
-                            textDecoration: 'none',
-                            border: '1px solid rgba(83, 135, 115, 0.3)',
-                            padding: '2px 6px',
-                            borderRadius: '3px',
-                            background: 'rgba(83, 135, 115, 0.05)'
-                          }}
-                        >
-                          ↗ Link
-                        </a>
+                  <React.Fragment key={c.id}>
+                    <tr>
+                      <td style={{ fontWeight: 600 }}>{c.name}</td>
+                      <td style={{ color: 'var(--color-text-secondary)' }}>{c.email}</td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <code style={{ fontSize: '0.72rem', color: 'var(--color-gold)', letterSpacing: '0.05em', fontWeight: 'bold' }}>{c.token}</code>
+                          <a
+                            href={spinUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              color: 'var(--color-sage)',
+                              fontSize: '0.68rem',
+                              textDecoration: 'none',
+                              border: '1px solid rgba(83, 135, 115, 0.3)',
+                              padding: '2px 6px',
+                              borderRadius: '3px',
+                              background: 'rgba(83, 135, 115, 0.05)'
+                            }}
+                          >
+                            ↗ Link
+                          </a>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(spinUrl);
+                            }}
+                            style={{
+                              background: 'transparent',
+                              border: '1px solid var(--color-border)',
+                              color: 'var(--color-text-secondary)',
+                              fontSize: '0.65rem',
+                              cursor: 'pointer',
+                              padding: '2px 6px',
+                              borderRadius: '3px',
+                              fontFamily: 'var(--font-mono)'
+                            }}
+                            title="Copy Link"
+                          >
+                            Copy
+                          </button>
+                        </div>
+                      </td>
+                      <td>
+                        {c.spinStatus === 'fresh'
+                          ? <span className="badge-error">Fresh</span>
+                          : <span className="badge-sage">Spun</span>
+                        }
+                      </td>
+                      <td style={{ fontWeight: 700, color: 'var(--color-gold)' }}>{c.allowedSpins ?? 1}</td>
+                      <td>{c.spinsCount ?? 0}</td>
+                      <td style={{ color: 'var(--color-text-secondary)' }}>{c.prizeName ?? '—'}</td>
+                      <td>
+                        {c.prizeCode
+                          ? <code style={{ color: 'var(--color-gold)', fontSize: '0.78rem', letterSpacing: '0.05em', fontWeight: 700 }}>{c.prizeCode}</code>
+                          : <span style={{ color: 'var(--color-text-dim)' }}>—</span>
+                        }
+                      </td>
+                      <td>
+                        {c.redeemedAt
+                          ? <span className="badge-sage" style={{ fontSize: '0.65rem' }}>{new Date(c.redeemedAt).toLocaleDateString('en-GB')} {new Date(c.redeemedAt).toLocaleTimeString('en-GB')}</span>
+                          : <span className="badge-gold">UNCLAIMED</span>
+                        }
+                      </td>
+                      <td>
                         <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(spinUrl);
-                          }}
-                          style={{
-                            background: 'transparent',
-                            border: '1px solid var(--color-border)',
-                            color: 'var(--color-text-secondary)',
-                            fontSize: '0.65rem',
-                            cursor: 'pointer',
-                            padding: '2px 6px',
-                            borderRadius: '3px',
-                            fontFamily: 'var(--font-mono)'
-                          }}
-                          title="Copy Link"
+                          onClick={() => handleGrantExtraSpin(c)}
+                          className="btn-ghost"
+                          style={{ fontSize: '0.62rem', padding: '4px 8px', letterSpacing: '0.02em', border: '1px solid var(--color-gold-bright)', color: 'var(--color-gold-bright)' }}
                         >
-                          Copy
+                          +1 Spin
                         </button>
-                      </div>
-                    </td>
-                    <td>
-                      {c.spinStatus === 'fresh'
-                        ? <span className="badge-error">Fresh</span>
-                        : <span className="badge-sage">Spun</span>
-                      }
-                    </td>
-                    <td style={{ color: 'var(--color-text-secondary)' }}>{c.prizeName ?? '—'}</td>
-                    <td>
-                      {c.prizeCode
-                        ? <code style={{ color: 'var(--color-gold)', fontSize: '0.78rem', letterSpacing: '0.05em', fontWeight: 700 }}>{c.prizeCode}</code>
-                        : <span style={{ color: 'var(--color-text-dim)' }}>—</span>
-                      }
-                    </td>
-                    <td>
-                      {c.redeemedAt
-                        ? <span className="badge-sage" style={{ fontSize: '0.65rem' }}>{new Date(c.redeemedAt).toLocaleDateString('en-GB')} {new Date(c.redeemedAt).toLocaleTimeString('en-GB')}</span>
-                        : <span className="badge-gold">UNCLAIMED</span>
-                      }
-                    </td>
-                  </tr>
+                      </td>
+                    </tr>
+
+                    {/* Won prizes nested report list (Redemption Management Reports) */}
+                    {c.prizesWon && c.prizesWon.length > 0 && (
+                      <tr>
+                        <td colSpan={10} style={{ padding: '4px 14px 12px', background: 'rgba(7,7,10,0.2)' }}>
+                          <div style={{ padding: '10px 14px', borderRadius: '4px', background: 'rgba(197, 168, 107, 0.03)', border: '1px solid rgba(197, 168, 107, 0.08)' }}>
+                            <p style={{ margin: '0 0 6px', fontSize: '0.7rem', fontWeight: 700, color: 'var(--color-gold)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                              Redemption & Win Log ({c.prizesWon.length})
+                            </p>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              {c.prizesWon.map((p, idx) => (
+                                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--color-text-secondary)' }}>
+                                  <span>
+                                    • Win {idx + 1}: <strong style={{ color: 'var(--color-text-primary)' }}>{p.prizeName}</strong>
+                                    {' '} (<code style={{ color: 'var(--color-gold)' }}>{p.prizeCode}</code>)
+                                    {' '} - won on {new Date(p.wonAt).toLocaleDateString('en-GB')} {new Date(p.wonAt).toLocaleTimeString('en-GB')}
+                                  </span>
+                                  <span>
+                                    {p.redeemedAt ? (
+                                      <span style={{ color: 'var(--color-sage)' }}>
+                                        Claimed on {new Date(p.redeemedAt).toLocaleDateString('en-GB')} {new Date(p.redeemedAt).toLocaleTimeString('en-GB')} {p.redeemedByEmail ? `by ${p.redeemedByEmail}` : ''}
+                                      </span>
+                                    ) : (
+                                      <span style={{ color: 'var(--color-gold-bright)', fontWeight: 'bold' }}>UNCLAIMED</span>
+                                    )}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 );
               })}
             </tbody>

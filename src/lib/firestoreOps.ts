@@ -83,15 +83,20 @@ export async function saveSpinResult(
   customerId: string,
   prizeId: string,
   prizeName: string,
-  prizeCode: string
+  prizeCode: string,
+  newSpinsCount: number,
+  spinStatus: 'fresh' | 'spun',
+  prizesWon: Customer['prizesWon']
 ): Promise<void> {
   await updateDoc(doc(db, CUSTOMERS_COL, customerId), {
-    spinStatus: 'spun',
+    spinStatus,
+    spinsCount: newSpinsCount,
     prizeId,
     prizeName,
     prizeCode,
     redeemedAt: null,
     redeemedByEmail: null,
+    prizesWon,
   });
 }
 
@@ -99,25 +104,61 @@ export async function getCustomerByCode(
   db: Firestore,
   code: string
 ): Promise<Customer | null> {
+  // First attempt direct check
   const q = query(
     collection(db, CUSTOMERS_COL),
     where('prizeCode', '==', code),
     limit(1)
   );
   const snap = await getDocs(q);
-  if (snap.empty) return null;
-  return snap.docs[0].data() as Customer;
+  if (!snap.empty) {
+    return snap.docs[0].data() as Customer;
+  }
+
+  // Fallback: Scan in-memory (useful for redeeming non-last spins)
+  const allSnap = await getDocs(query(collection(db, CUSTOMERS_COL)));
+  for (const d of allSnap.docs) {
+    const c = d.data() as Customer;
+    if (c.prizesWon?.some((p) => p.prizeCode === code)) {
+      return c;
+    }
+  }
+  return null;
 }
 
 export async function burnVoucher(
   db: Firestore,
   customerId: string,
-  staffEmail: string
+  staffEmail: string,
+  prizeCodeToBurn?: string
 ): Promise<void> {
-  await updateDoc(doc(db, CUSTOMERS_COL, customerId), {
-    redeemedAt: new Date().toISOString(),
-    redeemedByEmail: staffEmail,
-  });
+  const docRef = doc(db, CUSTOMERS_COL, customerId);
+  const snap = await getDoc(docRef);
+  if (!snap.exists()) return;
+  const customer = snap.data() as Customer;
+
+  const redeemedAt = new Date().toISOString();
+  const updateData: any = {};
+
+  if (!prizeCodeToBurn || customer.prizeCode === prizeCodeToBurn) {
+    updateData.redeemedAt = redeemedAt;
+    updateData.redeemedByEmail = staffEmail;
+  }
+
+  if (customer.prizesWon) {
+    updateData.prizesWon = customer.prizesWon.map((p) => {
+      if (p.prizeCode === (prizeCodeToBurn || customer.prizeCode)) {
+        return {
+          ...p,
+          redeemedAt,
+          redeemedByEmail: staffEmail,
+        };
+      }
+      return p;
+    });
+  }
+
+  await updateDoc(docRef, updateData);
 }
 
 export async function bulkCreateCustomers(

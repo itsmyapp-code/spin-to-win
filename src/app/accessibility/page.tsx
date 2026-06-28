@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'Accessibility Statement — The Seven Stars Spin Hub',
-  description: 'WCAG AAA accessibility statement for The Seven Stars Spin Hub.',
+  title: 'Accessibility Statement — Its My App Spin Hub',
+  description: 'WCAG AAA accessibility statement for Its My App Spin Hub.',
 };
 
 export default function AccessibilityPage() {
@@ -16,13 +16,13 @@ export default function AccessibilityPage() {
         Accessibility Statement
       </h1>
       <p style={{ color: 'var(--color-text-dim)', fontSize: '0.72rem', marginBottom: '40px', letterSpacing: '0.05em' }}>
-        WCAG 2.1 AAA Target · The Seven Stars Spin Hub
+        WCAG 2.1 AAA Target · Its My App Spin Hub
       </p>
 
       {[
         {
           heading: 'Our Commitment',
-          body: 'The Seven Stars is committed to ensuring the Spin Hub is accessible to all users, including those using assistive technologies. We aim to meet Web Content Accessibility Guidelines (WCAG) 2.1 Level AAA standards.',
+          body: 'Its My App is committed to ensuring the Spin Hub is accessible to all users, including those using assistive technologies. We aim to meet Web Content Accessibility Guidelines (WCAG) 2.1 Level AAA standards.',
         },
         {
           heading: 'Contrast & Typography',
@@ -50,7 +50,15 @@ export default function AccessibilityPage() {
         },
         {
           heading: 'Reporting Issues',
-          body: 'If you experience any accessibility barriers, please contact The Seven Stars directly. We aim to respond to accessibility queries within 5 working days and to resolve critical issues within 10 working days.',
+          body: (
+            <>
+              If you experience any accessibility barriers, please contact Its My App at{' '}
+              <a href="mailto:hello@itsmyapp.co.uk" style={{ color: 'var(--color-gold)', textDecoration: 'underline' }}>
+                hello@itsmyapp.co.uk
+              </a>{' '}
+              directly. We aim to respond to accessibility queries within 5 working days and to resolve critical issues within 10 working days.
+            </>
+          ),
         },
         {
           heading: 'Enforcement Procedure',

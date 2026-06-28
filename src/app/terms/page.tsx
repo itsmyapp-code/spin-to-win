@@ -24,7 +24,7 @@ export default function TermsPage() {
   const defaultTerms = [
     {
       heading: '1. Eligibility',
-      body: 'This promotion is open to all customers who receive a valid personalised spin link from The Seven Stars. Participants must be aged 18 or over. Employees and immediate family members of The Seven Stars are excluded from this promotion.',
+      body: 'This promotion is open to all customers who receive a valid personalised spin link from Its My App. Participants must be aged 18 or over. Employees and immediate family members of Its My App are excluded from this promotion.',
     },
     {
       heading: '2. How to Enter',
@@ -32,11 +32,11 @@ export default function TermsPage() {
     },
     {
       heading: '3. Prizes',
-      body: 'Prizes are as displayed on the spin wheel at the time of use. Prize availability and weightings are subject to change at the discretion of the management. The Seven Stars reserves the right to substitute prizes of equal or greater value.',
+      body: 'Prizes are as displayed on the spin wheel at the time of use. Prize availability and weightings are subject to change at the discretion of the management. Its My App reserves the right to substitute prizes of equal or greater value.',
     },
     {
       heading: '4. Prize Redemption',
-      body: 'Prizes must be redeemed in person at The Seven Stars during normal opening hours. Present your WIN code (WIN-XXXXXX-XX) to a member of staff. Prizes are non-transferable, have no cash alternative, and are subject to the specific terms displayed at the time of winning.',
+      body: 'Prizes must be redeemed in person at Its My App during normal opening hours. Present your WIN code (WIN-XXXXXX-XX) to a member of staff or contact hello@itsmyapp.co.uk. Prizes are non-transferable, have no cash alternative, and are subject to the specific terms displayed at the time of winning.',
     },
     {
       heading: '5. Validity',
@@ -44,7 +44,7 @@ export default function TermsPage() {
     },
     {
       heading: '6. Limitation of Liability',
-      body: 'The Seven Stars accepts no responsibility for technical failures that prevent participation. The decision of the management is final in all matters relating to this promotion.',
+      body: 'Its My App accepts no responsibility for technical failures that prevent participation. The decision of the management is final in all matters relating to this promotion.',
     },
     {
       heading: '7. Data Protection',
@@ -65,7 +65,7 @@ export default function TermsPage() {
         Terms & Conditions
       </h1>
       <p style={{ color: 'var(--color-text-dim)', fontSize: '0.72rem', marginBottom: '40px', letterSpacing: '0.05em' }}>
-        The Seven Stars Promotional Spin-the-Wheel Campaign · Effective: {new Date().getFullYear()}
+        Its My App Promotional Spin-the-Wheel Campaign · Effective: {new Date().getFullYear()}
       </p>
 
       {config?.customTerms ? (

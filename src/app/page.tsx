@@ -32,22 +32,23 @@ function HubContent() {
         <div className="header-inner">
           {/* Branding */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-            {/* SVG Logo */}
+            {/* Logo */}
             <img
-              src="/QIMonogram.svg"
-              alt="The Seven Stars"
+              src="/itsmyapp_logo.png"
+              alt="Its My App"
               width={36}
               height={36}
               style={{
                 width: '36px',
                 height: '36px',
                 flexShrink: 0,
+                objectFit: 'contain',
                 filter: 'drop-shadow(0 0 8px rgba(197,168,107,0.4))',
               }}
             />
             <div style={{ lineHeight: 1 }}>
               <p style={{ color: 'var(--color-gold)', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', margin: 0, whiteSpace: 'nowrap' }}>
-                The Seven Stars
+                Its My App
               </p>
               <p className="hide-mobile" style={{ color: 'var(--color-text-dim)', fontSize: '0.62rem', letterSpacing: '0.08em', margin: 0 }}>
                 Promotional Spin Hub
@@ -153,7 +154,7 @@ function HubContent() {
       >
         <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
           <p style={{ color: 'var(--color-text-dim)', fontSize: '0.65rem', margin: 0 }}>
-            © {new Date().getFullYear()} The Seven Stars · No cookies · Zero telemetry
+            © {new Date().getFullYear()} Its My App · No cookies · Zero telemetry
           </p>
           <nav aria-label="Legal links" style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
             {[

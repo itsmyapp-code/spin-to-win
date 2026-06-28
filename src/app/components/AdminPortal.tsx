@@ -23,7 +23,7 @@ function parseCSV(raw: string): { name: string; email: string }[] {
     .filter((row) => row.name.length > 0 && row.email.includes('@'));
 }
 
-function buildCustomer(name: string, email: string, baseUrl: string): Customer & { tokenUrl: string } {
+function buildCustomer(name: string, email: string, baseUrl: string, allowedSpins: number): Customer & { tokenUrl: string } {
   const id = `cust_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const token = generateToken();
   return {
@@ -39,12 +39,16 @@ function buildCustomer(name: string, email: string, baseUrl: string): Customer &
     redeemedByEmail: null,
     createdAt: new Date().toISOString(),
     tokenUrl: `${baseUrl}/?token=${token}`,
+    allowedSpins,
+    spinsCount: 0,
+    prizesWon: [],
   };
 }
 
 export default function AdminPortal() {
   const { user, staffRole } = useAuth();
   const [csvInput, setCsvInput] = useState('');
+  const [allowedSpins, setAllowedSpins] = useState(1);
   const [parsed, setParsed] = useState<(Customer & { tokenUrl: string })[]>([]);
   const [parseError, setParseError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
@@ -61,9 +65,9 @@ export default function AdminPortal() {
       return;
     }
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-    const customers = rows.map((r) => buildCustomer(r.name, r.email, baseUrl));
+    const customers = rows.map((r) => buildCustomer(r.name, r.email, baseUrl, allowedSpins));
     setParsed(customers);
-  }, [csvInput]);
+  }, [csvInput, allowedSpins]);
 
   const handleImport = useCallback(async () => {
     if (parsed.length === 0) return;
@@ -116,6 +120,22 @@ export default function AdminPortal() {
         {/* Left: Input */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div className="glass" style={{ padding: '24px', borderRadius: '8px' }}>
+            <div style={{ marginBottom: '16px' }}>
+              <label htmlFor="spins-input" style={{ display: 'block', color: 'var(--color-text-secondary)', fontSize: '0.7rem', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>
+                Allowed Spins Per Customer
+              </label>
+              <input
+                id="spins-input"
+                type="number"
+                min={1}
+                max={10}
+                value={allowedSpins}
+                onChange={(e) => { setAllowedSpins(Math.max(1, Number(e.target.value))); setParsed([]); }}
+                className="input-base"
+                style={{ maxWidth: '120px' }}
+              />
+            </div>
+
             <label htmlFor="csv-input" style={{ display: 'block', color: 'var(--color-text-secondary)', fontSize: '0.7rem', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '10px' }}>
               Raw CSV Input — Format: <code style={{ color: 'var(--color-gold)' }}>Name, Email</code>
             </label>

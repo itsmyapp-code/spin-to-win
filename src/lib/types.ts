@@ -28,6 +28,16 @@ export interface Customer {
   redeemedAt: string | null;
   redeemedByEmail: string | null;
   createdAt: string;
+  allowedSpins?: number;
+  spinsCount?: number;
+  prizesWon?: Array<{
+    prizeId: string;
+    prizeName: string;
+    prizeCode: string;
+    redeemedAt: string | null;
+    redeemedByEmail: string | null;
+    wonAt: string;
+  }>;
 }
 
 export interface StaffRole {

@@ -3,11 +3,11 @@ import './globals.css';
 import Providers from './components/Providers';
 
 export const metadata: Metadata = {
-  title: 'The Seven Stars — Promotional Spin Hub',
-  description: 'Spin the wheel and win exclusive prizes at The Seven Stars. A premium pub promotional experience.',
+  title: 'Its My App — Promotional Spin Hub',
+  description: 'Spin the wheel and win exclusive prizes at Its My App. A premium promotional experience.',
   manifest: '/manifest.json',
-  keywords: ['Seven Stars', 'pub', 'promotion', 'spin to win', 'prizes'],
-  authors: [{ name: 'The Seven Stars' }],
+  keywords: ['Its My App', 'promotion', 'spin to win', 'prizes'],
+  authors: [{ name: 'Its My App' }],
   robots: 'noindex, nofollow',
 };
 

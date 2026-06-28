@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy — The Seven Stars Spin Hub',
-  description: 'UK GDPR privacy notice for The Seven Stars Spin Hub application.',
+  title: 'Privacy Policy — Its My App Spin Hub',
+  description: 'UK GDPR privacy notice for Its My App Spin Hub application.',
 };
 
 export default function PrivacyPage() {
@@ -22,7 +22,15 @@ export default function PrivacyPage() {
       {[
         {
           heading: 'Controller',
-          body: 'The Seven Stars acts as the data controller for personal data collected through this application. For data protection enquiries, contact us directly.',
+          body: (
+            <>
+              Its My App acts as the data controller for personal data collected through this application. For data protection enquiries, contact us at{' '}
+              <a href="mailto:hello@itsmyapp.co.uk" style={{ color: 'var(--color-gold)', textDecoration: 'underline' }}>
+                hello@itsmyapp.co.uk
+              </a>{' '}
+              directly.
+            </>
+          ),
         },
         {
           heading: 'Data We Collect',
@@ -50,7 +58,15 @@ export default function PrivacyPage() {
         },
         {
           heading: 'Your Rights',
-          body: 'Under UK GDPR you have the right to access, rectify, erase, and port your personal data. You also have the right to object to processing and to withdraw consent. To exercise any of these rights, contact The Seven Stars directly. You have the right to lodge a complaint with the Information Commissioner\'s Office (ICO) at ico.org.uk.',
+          body: (
+            <>
+              Under UK GDPR you have the right to access, rectify, erase, and port your personal data. You also have the right to object to processing and to withdraw consent. To exercise any of these rights, contact Its My App at{' '}
+              <a href="mailto:hello@itsmyapp.co.uk" style={{ color: 'var(--color-gold)', textDecoration: 'underline' }}>
+                hello@itsmyapp.co.uk
+              </a>{' '}
+              directly. You have the right to lodge a complaint with the Information Commissioner\'s Office (ICO) at ico.org.uk.
+            </>
+          ),
         },
         {
           heading: 'International Transfers',

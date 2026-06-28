@@ -43,15 +43,28 @@ export default function StaffTerminal() {
       if (!customer) {
         setVerifyState('not_found');
         setFoundCustomer(null);
-      } else if (customer.redeemedAt) {
-        setVerifyState('already_redeemed');
-        setFoundCustomer(customer);
-      } else if (customer.spinStatus === 'spun') {
-        setVerifyState('valid');
-        setFoundCustomer(customer);
-      } else {
+        return;
+      }
+
+      // Check the specific prize matching the code
+      const matchedPrize = customer.prizesWon?.find((p) => p.prizeCode === codeInput) || 
+        (customer.prizeCode === codeInput ? {
+          prizeId: customer.prizeId,
+          prizeName: customer.prizeName,
+          prizeCode: customer.prizeCode,
+          redeemedAt: customer.redeemedAt,
+          redeemedByEmail: customer.redeemedByEmail,
+        } : null);
+
+      if (!matchedPrize) {
         setVerifyState('not_found');
         setFoundCustomer(null);
+      } else if (matchedPrize.redeemedAt) {
+        setVerifyState('already_redeemed');
+        setFoundCustomer(customer);
+      } else {
+        setVerifyState('valid');
+        setFoundCustomer(customer);
       }
     } catch {
       setVerifyState('not_found');
@@ -63,17 +76,30 @@ export default function StaffTerminal() {
     setBurning(true);
     try {
       const { db } = initFirebase();
-      await burnVoucher(db, foundCustomer.id, user.email);
+      await burnVoucher(db, foundCustomer.id, user.email, codeInput);
       setVerifyState('burned');
-      setFoundCustomer((prev) =>
-        prev ? { ...prev, redeemedAt: new Date().toISOString(), redeemedByEmail: user.email ?? '' } : prev
-      );
+      setFoundCustomer((prev) => {
+        if (!prev) return null;
+        const redeemedAt = new Date().toISOString();
+        const updatedPrizesWon = prev.prizesWon?.map((p) => {
+          if (p.prizeCode === codeInput) {
+            return { ...p, redeemedAt, redeemedByEmail: user.email };
+          }
+          return p;
+        });
+        return {
+          ...prev,
+          redeemedAt: prev.prizeCode === codeInput ? redeemedAt : prev.redeemedAt,
+          redeemedByEmail: prev.prizeCode === codeInput ? user.email : prev.redeemedByEmail,
+          prizesWon: updatedPrizesWon
+        };
+      });
     } catch {
       // surface error state
     } finally {
       setBurning(false);
     }
-  }, [foundCustomer, user]);
+  }, [foundCustomer, user, codeInput]);
 
   const handleReset = useCallback(() => {
     setCodeInput('');
@@ -92,6 +118,15 @@ export default function StaffTerminal() {
       />
     );
   }
+
+  const matchedPrize = foundCustomer?.prizesWon?.find((p) => p.prizeCode === codeInput) || 
+    (foundCustomer?.prizeCode === codeInput ? {
+      prizeId: foundCustomer.prizeId,
+      prizeName: foundCustomer.prizeName,
+      prizeCode: foundCustomer.prizeCode,
+      redeemedAt: foundCustomer.redeemedAt,
+      redeemedByEmail: foundCustomer.redeemedByEmail,
+    } : null);
 
   // ─── POS Terminal ─────────────────────────────────────────────────────────────
   return (
@@ -186,7 +221,7 @@ export default function StaffTerminal() {
             <div>
               <span style={{ color: 'var(--color-text-dim)', fontSize: '0.68rem', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Timestamp (UTC)</span>
               <p style={{ color: 'var(--color-text-primary)', margin: '2px 0 0', fontWeight: 600 }}>
-                {foundCustomer.redeemedAt ? new Date(foundCustomer.redeemedAt).toUTCString() : '—'}
+                {matchedPrize?.redeemedAt ? new Date(matchedPrize.redeemedAt).toUTCString() : '—'}
               </p>
             </div>
           </div>
@@ -204,8 +239,8 @@ export default function StaffTerminal() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
             <InfoRow label="Customer Name" value={foundCustomer.name} />
             <InfoRow label="Email" value={foundCustomer.email} />
-            <InfoRow label="Prize" value={foundCustomer.prizeName ?? '—'} highlight />
-            <InfoRow label="Code" value={foundCustomer.prizeCode ?? '—'} highlight />
+            <InfoRow label="Prize" value={matchedPrize?.prizeName ?? '—'} highlight />
+            <InfoRow label="Code" value={matchedPrize?.prizeCode ?? '—'} highlight />
           </div>
           <button
             id="burn-voucher-btn"
@@ -233,10 +268,10 @@ export default function StaffTerminal() {
           </h3>
           <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem', lineHeight: 1.7, margin: '0 0 16px' }}>
             {foundCustomer.name}'s voucher for{' '}
-            <strong style={{ color: 'var(--color-text-primary)' }}>{foundCustomer.prizeName}</strong>{' '}
+            <strong style={{ color: 'var(--color-text-primary)' }}>{matchedPrize?.prizeName}</strong>{' '}
             has been marked as redeemed.<br />
             <span style={{ color: 'var(--color-text-dim)', fontSize: '0.72rem' }}>
-              UTC: {foundCustomer.redeemedAt ? new Date(foundCustomer.redeemedAt).toUTCString() : new Date().toUTCString()}
+              UTC: {matchedPrize?.redeemedAt ? new Date(matchedPrize.redeemedAt).toUTCString() : new Date().toUTCString()}
             </span>
           </p>
           <button id="reset-terminal-btn" onClick={handleReset} className="btn-gold" style={{ minWidth: '200px' }}>

@@ -22,6 +22,7 @@ export default function CustomerView({ token }: CustomerViewProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [spinResult, setSpinResult] = useState<{ prize: PrizeTier; code: string } | null>(null);
+  const [showWinOverlay, setShowWinOverlay] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -52,9 +53,11 @@ export default function CustomerView({ token }: CustomerViewProps) {
           setError('NOT_FOUND');
         } else {
           setCustomer(cust);
-          // If customer name is 'Test User' or token contains 'TEST', bypass the "already spun" locking screen for testing
+          // If customer has already spun all allowed spins, show the latest result
           const isTestSession = cust.name.toLowerCase().includes('test') || token.toLowerCase().includes('test');
-          if (cust.spinStatus === 'spun' && cust.prizeId && cust.prizeCode && !isTestSession) {
+          const maxSpins = cust.allowedSpins ?? 1;
+          const spinsDone = cust.spinsCount ?? 0;
+          if (spinsDone >= maxSpins && cust.prizeId && cust.prizeCode && !isTestSession) {
             const prize = cfg.prizes.find((p) => p.id === cust.prizeId) ?? null;
             if (prize) {
               setSpinResult({ prize, code: cust.prizeCode });
@@ -62,7 +65,7 @@ export default function CustomerView({ token }: CustomerViewProps) {
           }
         }
         setConfig(cfg);
-      } catch {
+      } catch (e) {
         setError('LOAD_FAILED');
       } finally {
         setLoading(false);
@@ -73,25 +76,45 @@ export default function CustomerView({ token }: CustomerViewProps) {
   const handleSpinComplete = useCallback(
     async (prize: PrizeTier, prizeCode: string) => {
       if (!customer) return;
-      setSpinResult({ prize, code: prizeCode });
       
       const isTestSession = customer.name.toLowerCase().includes('test') || (token && token.toLowerCase().includes('test'));
+      const newSpinsCount = (customer.spinsCount ?? 0) + 1;
+      const maxSpins = customer.allowedSpins ?? 1;
+      const spinStatus = newSpinsCount >= maxSpins ? 'spun' : 'fresh';
+
+      const newPrizeWonItem = {
+        prizeId: prize.id,
+        prizeName: prize.name,
+        prizeCode,
+        redeemedAt: null,
+        redeemedByEmail: null,
+        wonAt: new Date().toISOString(),
+      };
+
+      const updatedPrizesWon = [...(customer.prizesWon || []), newPrizeWonItem];
+
+      // Set spinResult to open overlay
+      setSpinResult({ prize, code: prizeCode });
+      setShowWinOverlay(true);
+
       try {
         const { db } = initFirebase();
-        // If it's a test session, write the win log but do not lock out the spinStatus
         if (isTestSession) {
-          // Log results, but optionally skip updating customer record to 'spun' to allow infinite spins
-          await saveSpinResult(db, customer.id, prize.id, prize.name, prizeCode);
-          // Reset spin status locally back to fresh after 5 seconds to let them spin again
-          setTimeout(() => {
-            setSpinResult(null);
-          }, 5000);
+          await saveSpinResult(db, customer.id, prize.id, prize.name, prizeCode, newSpinsCount, 'fresh', updatedPrizesWon);
         } else {
-          await saveSpinResult(db, customer.id, prize.id, prize.name, prizeCode);
-          setCustomer((prev) => prev ? { ...prev, spinStatus: 'spun', prizeId: prize.id, prizeName: prize.name, prizeCode } : prev);
+          await saveSpinResult(db, customer.id, prize.id, prize.name, prizeCode, newSpinsCount, spinStatus, updatedPrizesWon);
+          setCustomer((prev) => prev ? {
+            ...prev,
+            spinsCount: newSpinsCount,
+            spinStatus,
+            prizeId: prize.id,
+            prizeName: prize.name,
+            prizeCode,
+            prizesWon: updatedPrizesWon
+          } : prev);
         }
-      } catch {
-        // Result stored in local state even if Firestore write fails
+      } catch (e) {
+        // Result stored locally even if network update fails
       }
     },
     [customer, token]
@@ -107,6 +130,125 @@ export default function CustomerView({ token }: CustomerViewProps) {
   const handlePrint = useCallback(() => {
     window.print();
   }, []);
+
+  // Generates and downloads a beautiful voucher card image using HTML5 Canvas
+  const handleSaveImage = useCallback(() => {
+    if (!customer || !spinResult) return;
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 600;
+      canvas.height = 700;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      // Draw background
+      ctx.fillStyle = '#07070A';
+      ctx.fillRect(0, 0, 600, 700);
+
+      // Gold border
+      ctx.strokeStyle = '#C5A86B';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(10, 10, 580, 680);
+
+      // Inner border
+      ctx.strokeStyle = 'rgba(197,168,107,0.3)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(20, 20, 560, 660);
+
+      // Title & Branding
+      ctx.fillStyle = '#C5A86B';
+      ctx.font = 'bold 28px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('ITS MY APP', 300, 80);
+
+      ctx.fillStyle = '#9A9490';
+      ctx.font = '14px monospace';
+      ctx.fillText('PROMOTIONAL PRIZE VOUCHER', 300, 115);
+
+      // Line divider
+      ctx.strokeStyle = 'rgba(197,168,107,0.2)';
+      ctx.beginPath();
+      ctx.moveTo(40, 140);
+      ctx.lineTo(560, 140);
+      ctx.stroke();
+
+      // Emoji
+      ctx.font = '72px sans-serif';
+      ctx.fillText(spinResult.prize.emoji, 300, 230);
+
+      // Prize Name
+      ctx.fillStyle = '#C5A86B';
+      ctx.font = 'bold 30px monospace';
+      ctx.fillText(spinResult.prize.name, 300, 290);
+
+      // Description
+      ctx.fillStyle = '#9A9490';
+      ctx.font = '16px monospace';
+      ctx.fillText(spinResult.prize.description, 300, 335);
+
+      // Code Box
+      ctx.fillStyle = '#111113';
+      ctx.fillRect(80, 380, 440, 110);
+      ctx.strokeStyle = '#8B7447';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(80, 380, 440, 110);
+
+      ctx.fillStyle = '#5A5652';
+      ctx.font = 'bold 12px monospace';
+      ctx.fillText('VALIDATION CODE', 300, 410);
+
+      ctx.fillStyle = '#C5A86B';
+      ctx.font = 'bold 36px monospace';
+      ctx.fillText(spinResult.code, 300, 462);
+
+      // Terms box
+      ctx.fillStyle = 'rgba(197,168,107,0.05)';
+      ctx.fillRect(40, 510, 520, 100);
+      
+      ctx.fillStyle = '#5A5652';
+      ctx.font = 'bold 12px monospace';
+      ctx.fillText('PRIZE TERMS', 300, 532);
+
+      ctx.fillStyle = '#9A9490';
+      ctx.font = '12px monospace';
+
+      const terms = spinResult.prize.terms;
+      const words = terms.split(' ');
+      let line = '';
+      let y = 556;
+      for (let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + ' ';
+        const metrics = ctx.measureText(testLine);
+        if (metrics.width > 460 && n > 0) {
+          ctx.fillText(line, 300, y);
+          line = words[n] + ' ';
+          y += 20;
+        } else {
+          line = testLine;
+        }
+      }
+      ctx.fillText(line, 300, y);
+
+      // Footer references
+      ctx.fillStyle = '#5A5652';
+      ctx.font = '12px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText(`Issued to: ${customer.name}`, 40, 650);
+      ctx.textAlign = 'right';
+      ctx.fillText(`Date: ${new Date().toLocaleDateString('en-GB')}`, 560, 650);
+
+      // Output as PNG download
+      const dataUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = `voucher-${spinResult.code}.png`;
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      console.error('Error generating voucher canvas:', e);
+    }
+  }, [customer, spinResult]);
 
   // ─── Loading ────────────────────────────────────────────────────────────────
   if (authLoading || loading) {
@@ -137,7 +279,7 @@ export default function CustomerView({ token }: CustomerViewProps) {
         </h2>
         <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.82rem', lineHeight: '1.7' }}>
           This page requires a personalised link with a valid access token.<br />
-          Please check the link you received from The Seven Stars.
+          Please check the link you received from Its My App.
         </p>
       </div>
     );
@@ -152,7 +294,7 @@ export default function CustomerView({ token }: CustomerViewProps) {
         </h2>
         <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.82rem', lineHeight: '1.7' }}>
           The access token <code style={{ color: 'var(--color-gold)' }}>{token}</code> was not found in our system.<br />
-          Please contact The Seven Stars for assistance.
+          Please contact Its My App for assistance.
         </p>
       </div>
     );
@@ -172,52 +314,57 @@ export default function CustomerView({ token }: CustomerViewProps) {
 
   if (!customer || !config) return null;
 
-  // ─── Already Spun — Show Result ───────────────────────────────────────────────
-  if (customer.spinStatus === 'spun' && spinResult) {
-    return (
-      <div className="animate-fade-in grid-two-col" style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
-        <WheelPanel prizes={config.prizes} disabled={true} onSpinComplete={() => void 0} alreadySpun />
-        <ResultCard
-          customer={customer}
-          spinResult={spinResult}
-          saving={saving}
-          saved={saved}
-          onSave={handleSaveToCloud}
-          onPrint={handlePrint}
-          alreadySpun
-        />
-      </div>
-    );
-  }
+  const maxSpins = customer.allowedSpins ?? 1;
+  const spinsDone = customer.spinsCount ?? 0;
+  const spinsLeft = Math.max(0, maxSpins - spinsDone);
+  const isSpunOut = spinsLeft <= 0;
+  const isTestSession = customer.name.toLowerCase().includes('test') || (token && token.toLowerCase().includes('test'));
 
-  // ─── Fresh Spin ──────────────────────────────────────────────────────────────
+  // ─── Fresh or Spin History Page Layout ──────────────────────────────────────
   return (
-    <div className="animate-fade-in grid-two-col" style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
+    <div className="animate-fade-in grid-two-col" style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto', alignItems: 'start' }}>
+      
       {/* Left: Wheel */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}>
+        
         {/* Welcome */}
-        <div className="glass" style={{ padding: '20px 24px', borderRadius: '8px' }}>
-          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.72rem', letterSpacing: '0.12em', textTransform: 'uppercase', margin: '0 0 4px' }}>
-            Welcome back
-          </p>
-          <h2 style={{ color: 'var(--color-gold)', fontSize: '1.4rem', fontWeight: 800, margin: 0 }}>
-            {customer.name}
-          </h2>
+        <div className="glass" style={{ padding: '20px 24px', borderRadius: '8px', width: '100%' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.72rem', letterSpacing: '0.12em', textTransform: 'uppercase', margin: '0 0 4px' }}>
+                Welcome back
+              </p>
+              <h2 style={{ color: 'var(--color-gold)', fontSize: '1.4rem', fontWeight: 800, margin: 0 }}>
+                {customer.name}
+              </h2>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <span className="badge-gold">
+                Spins: {spinsDone} / {maxSpins}
+              </span>
+            </div>
+          </div>
           <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.76rem', margin: '8px 0 0' }}>
-            Your personalised spin is ready. Good luck! 🍀
+            {isSpunOut 
+              ? 'You have completed all your promotional spins! Check your win ledger below.' 
+              : `You have ${spinsLeft} spin${spinsLeft !== 1 ? 's' : ''} remaining. Good luck! 🍀`
+            }
           </p>
         </div>
 
-        <WheelPanel
-          prizes={config.prizes}
-          disabled={customer.spinStatus === 'spun' && !(customer.name.toLowerCase().includes('test') || (token && token.toLowerCase().includes('test')))}
-          onSpinComplete={handleSpinComplete}
-          alreadySpun={false}
-        />
+        {/* Wheel Viewport placement - Lower/middle ergonomics */}
+        <div style={{ marginTop: '10px', width: '100%', display: 'flex', justifyContent: 'center' }}>
+          <WheelPanel
+            prizes={config.prizes}
+            disabled={isSpunOut && !isTestSession}
+            onSpinComplete={handleSpinComplete}
+            alreadySpun={isSpunOut}
+          />
+        </div>
       </div>
 
-      {/* Right: Result or waiting */}
-      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      {/* Right: Won prizes ledger / results history */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
         {spinResult ? (
           <ResultCard
             customer={customer}
@@ -226,7 +373,10 @@ export default function CustomerView({ token }: CustomerViewProps) {
             saved={saved}
             onSave={handleSaveToCloud}
             onPrint={handlePrint}
-            alreadySpun={false}
+            onSaveImage={handleSaveImage}
+            alreadySpun={isSpunOut}
+            spinsLeft={spinsLeft}
+            onSpinAgain={() => setSpinResult(null)}
           />
         ) : (
           <div
@@ -258,11 +408,119 @@ export default function CustomerView({ token }: CustomerViewProps) {
               margin: '8px 0',
             }} />
             <p style={{ color: 'var(--color-text-dim)', fontSize: '0.72rem', margin: 0 }}>
-              Each token is valid for one spin only.
+              This promotional link allows {maxSpins} total spin{maxSpins !== 1 ? 's' : ''}.
             </p>
           </div>
         )}
+
+        {/* Historic won prizes summary list */}
+        {customer.prizesWon && customer.prizesWon.length > 0 && (
+          <div className="glass" style={{ width: '100%', padding: '20px', borderRadius: '8px' }}>
+            <p style={{ color: 'var(--color-gold)', fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', margin: '0 0 12px' }}>
+              🎁 Your Won Prizes ({customer.prizesWon.length})
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {customer.prizesWon.map((p, idx) => {
+                const matchedPrize = config.prizes.find(x => x.id === p.prizeId);
+                return (
+                  <div 
+                    key={idx} 
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'space-between', 
+                      padding: '10px 12px', 
+                      background: 'rgba(255,255,255,0.02)', 
+                      border: '1px solid var(--color-border-dim)', 
+                      borderRadius: '4px' 
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontSize: '1.2rem' }}>{matchedPrize?.emoji ?? '🎁'}</span>
+                      <div>
+                        <p style={{ margin: 0, fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>{matchedPrize?.name ?? p.prizeName}</p>
+                        <code style={{ fontSize: '0.7rem', color: 'var(--color-gold)' }}>{p.prizeCode}</code>
+                      </div>
+                    </div>
+                    <div>
+                      {p.redeemedAt ? (
+                        <span className="badge-sage" style={{ fontSize: '0.62rem' }}>Claimed</span>
+                      ) : (
+                        <span className="badge-gold" style={{ fontSize: '0.62rem' }}>Active</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Cinematic scale-in post-win transition overlay */}
+      {showWinOverlay && spinResult && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(7,7,10,0.85)',
+            backdropFilter: 'blur(16px)',
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+          }}
+          className="animate-fade-in"
+        >
+          <div
+            className="glass animate-fade-in-scale"
+            style={{
+              maxWidth: '500px',
+              width: '100%',
+              padding: '28px',
+              borderRadius: '12px',
+              border: `2px solid var(--color-gold)`,
+              boxShadow: '0 0 50px rgba(197, 168, 107, 0.25)',
+              position: 'relative',
+            }}
+          >
+            <button
+              onClick={() => setShowWinOverlay(false)}
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                background: 'none',
+                border: 'none',
+                color: 'var(--color-text-dim)',
+                fontSize: '1.5rem',
+                cursor: 'pointer',
+                lineHeight: 1,
+              }}
+              aria-label="Close win overlay"
+            >
+              ×
+            </button>
+
+            <ResultCard
+              customer={customer}
+              spinResult={spinResult}
+              saving={saving}
+              saved={saved}
+              onSave={handleSaveToCloud}
+              onPrint={handlePrint}
+              onSaveImage={handleSaveImage}
+              alreadySpun={false}
+              spinsLeft={spinsLeft}
+              onSpinAgain={() => {
+                setSpinResult(null);
+                setShowWinOverlay(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -281,7 +539,7 @@ function WheelPanel({
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', width: '100%' }}>
       {alreadySpun && (
         <div className="badge-gold" style={{ alignSelf: 'flex-start' }}>
-          Already Spun — Result Recorded
+          All Allowed Spins Completed
         </div>
       )}
       <SpinWheel prizes={prizes} onSpinComplete={onSpinComplete} disabled={disabled} />
@@ -307,17 +565,22 @@ function WheelPanel({
   );
 }
 
-function ResultCard({
-  customer, spinResult, saving, saved, onSave, onPrint, alreadySpun,
-}: {
+interface ResultCardProps {
   customer: Customer;
   spinResult: { prize: PrizeTier; code: string };
   saving: boolean;
   saved: boolean;
   onSave: () => void;
   onPrint: () => void;
+  onSaveImage: () => void;
   alreadySpun: boolean;
-}) {
+  spinsLeft?: number;
+  onSpinAgain?: () => void;
+}
+
+function ResultCard({
+  customer, spinResult, saving, saved, onSave, onPrint, onSaveImage, alreadySpun, spinsLeft = 0, onSpinAgain,
+}: ResultCardProps) {
   const isLoser = spinResult.prize.id === 'P6';
 
   return (
@@ -329,6 +592,7 @@ function ResultCard({
         borderRadius: '8px',
         border: `1px solid ${isLoser ? 'var(--color-border)' : 'rgba(197,168,107,0.4)'}`,
         boxShadow: isLoser ? 'none' : '0 0 40px rgba(197,168,107,0.12)',
+        width: '100%',
       }}
     >
       {/* Result header */}
@@ -405,24 +669,61 @@ function ResultCard({
           </div>
 
           {/* Action buttons */}
-          <div className="voucher-actions" style={{ display: 'flex', gap: '10px' }}>
+          <div className="voucher-actions" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                id="save-to-cloud-btn"
+                onClick={onSave}
+                disabled={saving || saved}
+                className={saved ? 'btn-sage' : 'btn-gold'}
+                style={{ flex: 1 }}
+              >
+                {saving ? '⏳ Saving…' : saved ? '✔ Saved to Cloud' : '☁ Save Win to Ledger'}
+              </button>
+              <button
+                id="print-voucher-btn"
+                onClick={onPrint}
+                className="btn-ghost"
+                style={{ flex: 1 }}
+              >
+                🖨 Print
+              </button>
+            </div>
+            
+            {/* Save to Photos - fixes image saving */}
             <button
-              id="save-to-cloud-btn"
-              onClick={onSave}
-              disabled={saving || saved}
-              className={saved ? 'btn-sage' : 'btn-gold'}
-              style={{ flex: 1 }}
+              id="save-image-btn"
+              onClick={onSaveImage}
+              className="btn-gold"
+              style={{
+                width: '100%',
+                padding: '14px',
+                fontSize: '0.85rem',
+                border: '1px solid var(--color-gold-bright)',
+                background: 'rgba(197,168,107,0.1)',
+                color: 'var(--color-gold)'
+              }}
             >
-              {saving ? '⏳ Saving…' : saved ? '✔ Saved to Cloud' : '☁ Save Win to Cloud Ledger'}
+              📥 Save to Photos (Download PNG)
             </button>
-            <button
-              id="print-voucher-btn"
-              onClick={onPrint}
-              className="btn-ghost"
-              style={{ flex: 1 }}
-            >
-              🖨 Snapshot Voucher
-            </button>
+
+            {/* Spin Again button if multi-spins are left */}
+            {spinsLeft > 0 && onSpinAgain && (
+              <button
+                onClick={onSpinAgain}
+                className="btn-sage"
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  fontSize: '0.88rem',
+                  marginTop: '10px',
+                  fontWeight: 'bold',
+                  letterSpacing: '0.08em'
+                }}
+              >
+                ✨ Spin Again! ({spinsLeft} Left)
+              </button>
+            )}
           </div>
         </>
       )}
@@ -435,6 +736,20 @@ function ResultCard({
               View prize terms
             </a>
           </p>
+          {spinsLeft > 0 && onSpinAgain && (
+            <button
+              onClick={onSpinAgain}
+              className="btn-sage"
+              style={{
+                width: '100%',
+                padding: '12px',
+                fontSize: '0.82rem',
+                marginTop: '14px'
+              }}
+            >
+              Spin Again ({spinsLeft} Left)
+            </button>
+          )}
         </div>
       )}
     </div>

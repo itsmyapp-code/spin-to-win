@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'Cookie Statement — The Seven Stars Spin Hub',
-  description: 'Cookie-free storage statement for The Seven Stars Spin Hub.',
+  title: 'Cookie Statement — Its My App Spin Hub',
+  description: 'Cookie-free storage statement for Its My App Spin Hub.',
 };
 
 export default function CookiesPage() {
@@ -24,7 +24,7 @@ export default function CookiesPage() {
           ✓ This Application Uses Zero Cookies
         </p>
         <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem', lineHeight: 1.7, margin: 0 }}>
-          The Seven Stars Spin Hub has been built from the ground up with a strict no-cookie policy.
+          The Its My App Spin Hub has been built from the ground up with a strict no-cookie policy.
           No cookies — first-party or third-party — are set or read at any point during your visit.
         </p>
       </div>

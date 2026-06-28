@@ -64,6 +64,7 @@ function generateWinCode(prizeId: string): string {
 export default function SpinWheel({ prizes, onSpinComplete, disabled }: SpinWheelProps) {
   const [rotation, setRotation] = useState(0);
   const [spinState, setSpinState] = useState<SpinState>('idle');
+  const [needleTickIndex, setNeedleTickIndex] = useState(0);
   const currentRotation = useRef(0);
   const wheelRef = useRef<SVGGElement>(null);
 
@@ -136,6 +137,7 @@ export default function SpinWheel({ prizes, onSpinComplete, disabled }: SpinWhee
   const handleSpin = useCallback(() => {
     if (spinState !== 'idle' || disabled) return;
     setSpinState('spinning');
+    setNeedleTickIndex(0);
 
     const selectedIndex = selectWeightedRandom(prizes);
     const selectedSegment = segments[selectedIndex];
@@ -158,6 +160,7 @@ export default function SpinWheel({ prizes, onSpinComplete, disabled }: SpinWhee
       const pitch = 850 - 450 * ratio; // Lower pitch as it slows down
       setTimeout(() => {
         playTickSound(pitch, 0.04);
+        setNeedleTickIndex(i + 1);
       }, delay);
     }
 
@@ -207,7 +210,8 @@ export default function SpinWheel({ prizes, onSpinComplete, disabled }: SpinWhee
             ref={wheelRef}
             style={{
               transformOrigin: `${CX}px ${CY}px`,
-              transform: `rotate(${rotation}deg)`,
+              transform: `rotate(${rotation}deg) translateZ(0)`,
+              willChange: 'transform',
               transition: spinState === 'spinning'
                 ? 'transform 3.5s cubic-bezier(0.1, 0.8, 0.3, 1)'
                 : 'none',
@@ -298,12 +302,19 @@ export default function SpinWheel({ prizes, onSpinComplete, disabled }: SpinWhee
                 letterSpacing: '0.05em',
               }}
             >
-              7★
+              IMA
             </text>
           </g>
 
-          {/* Needle (fixed, does not rotate) */}
-          <g style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.8))' }}>
+          {/* Needle (fixed, does not rotate but has tick animation) */}
+          <g
+            key={`needle-tick-${needleTickIndex}`}
+            className={needleTickIndex > 0 ? 'needle-tick-active' : ''}
+            style={{
+              transformOrigin: `${CX}px ${CY - RADIUS}px`,
+              filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.8))'
+            }}
+          >
             <polygon
               points={`${CX - 10},${CY - RADIUS - 8} ${CX + 10},${CY - RADIUS - 8} ${CX},${CY - RADIUS + 22}`}
               fill="#C5A86B"
