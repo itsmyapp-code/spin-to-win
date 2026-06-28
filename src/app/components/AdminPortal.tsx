@@ -54,6 +54,7 @@ export default function AdminPortal() {
   const [parseError, setParseError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<string | null>(null);
+  const [showHelp, setShowHelp] = useState(false);
 
   const [rolesList, setRolesList] = useState<any[]>([]);
   const [newRoleEmail, setNewRoleEmail] = useState('');
@@ -417,6 +418,51 @@ export default function AdminPortal() {
             </div>
           </div>
         </div>
+      </section>
+
+      {/* Help Guide Accordion */}
+      <section style={{ marginTop: '24px' }}>
+        <button
+          onClick={() => setShowHelp(!showHelp)}
+          className="btn-ghost"
+          style={{ width: '100%', textAlign: 'left', padding: '12px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', border: '1px solid var(--color-border)' }}
+        >
+          <span>📖 Admin Help & Operations Guide</span>
+          <span>{showHelp ? '▲ Close' : '▼ Open'}</span>
+        </button>
+
+        {showHelp && (
+          <div className="glass animate-fade-in" style={{ padding: '24px', borderRadius: '0 0 6px 6px', borderTop: 'none', fontSize: '0.78rem', lineHeight: 1.7, color: 'var(--color-text-secondary)' }}>
+            <h3 style={{ color: 'var(--color-gold)', margin: '0 0 10px', fontSize: '0.85rem', fontWeight: 700 }}>1. Bulk Onboarding Customers</h3>
+            <p style={{ margin: '0 0 14px' }}>
+              Paste comma-separated rows inside the text box. The format must be exactly: <code style={{ background: 'var(--color-surface-raised)', padding: '2px 4px', borderRadius: '3px' }}>Name, Email</code>, one customer per line. For example:<br />
+              <code style={{ display: 'block', background: 'var(--color-surface-raised)', padding: '6px 10px', borderRadius: '3px', marginTop: '4px', fontFamily: 'monospace' }}>
+                John Doe, john@example.com<br />
+                Jane Smith, jane@example.com
+              </code>
+            </p>
+
+            <h3 style={{ color: 'var(--color-gold)', margin: '0 0 10px', fontSize: '0.85rem', fontWeight: 700 }}>2. Specifying Allowed Spins</h3>
+            <p style={{ margin: '0 0 14px' }}>
+              Before clicking <strong>Execute Bulk Parse</strong>, set the "Default Allowed Spins" number (e.g. 1 to 5). This specifies how many turns each newly imported customer is permitted to spin.
+            </p>
+
+            <h3 style={{ color: 'var(--color-gold)', margin: '0 0 10px', fontSize: '0.85rem', fontWeight: 700 }}>3. Managing Access Roles</h3>
+            <p style={{ margin: '0 0 14px' }}>
+              Under <strong>Access Control Registry</strong>, you can authorize emails. A user cannot log in unless their email is authorized here first.
+              <ul style={{ margin: '6px 0 0 20px', padding: 0 }}>
+                <li><strong>Admin:</strong> Full system control (Bulk imports, role creation).</li>
+                <li><strong>Manager:</strong> Adjusts segment odds, inventory limits, and legal policy. Can authorize Staff access.</li>
+                <li><strong>Staff:</strong> Front-of-house login to scan and redeem voucher codes.</li>
+              </ul>
+            </p>
+
+            <h3 style={{ color: 'var(--color-gold)', margin: '0 0 10px', fontSize: '0.85rem', fontWeight: 700 }}>4. User Registration Flow</h3>
+            <p style={{ margin: 0 }}>
+              Once you authorize an email, tell the user to visit the site, select their dashboard role in the top header, click the <strong>Create Account</strong> tab on the sign-in form, and register using their exact pre-authorized email address.
+            </p>
+          </div>
+        )}
       </section>
 
       {/* Tip */}

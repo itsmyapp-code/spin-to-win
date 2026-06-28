@@ -21,6 +21,7 @@ export default function ManagerDashboard() {
   const [customTerms, setCustomTerms] = useState('');
   const [reportStart, setReportStart] = useState('');
   const [reportEnd, setReportEnd] = useState('');
+  const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
     if (!user || user.isAnonymous || !staffRole) return;
@@ -727,6 +728,48 @@ export default function ManagerDashboard() {
             </tbody>
           </table>
         </div>
+      </section>
+
+      {/* Manager Help Guide Accordion */}
+      <section style={{ marginBottom: '40px' }}>
+        <button
+          onClick={() => setShowHelp(!showHelp)}
+          className="btn-ghost"
+          style={{ width: '100%', textAlign: 'left', padding: '12px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', border: '1px solid var(--color-border)' }}
+        >
+          <span>📖 Manager Help & Operations Guide</span>
+          <span>{showHelp ? '▲ Close' : '▼ Open'}</span>
+        </button>
+
+        {showHelp && (
+          <div className="glass animate-fade-in" style={{ padding: '24px', borderRadius: '0 0 6px 6px', borderTop: 'none', fontSize: '0.78rem', lineHeight: 1.7, color: 'var(--color-text-secondary)' }}>
+            <h3 style={{ color: 'var(--color-gold)', margin: '0 0 10px', fontSize: '0.85rem', fontWeight: 700 }}>1. Adjusting Odds (Weights)</h3>
+            <p style={{ margin: '0 0 14px' }}>
+              The Probability Matrix lets you set relative segment weights. Odds are calculated dynamically as: <code style={{ background: 'var(--color-surface-raised)', padding: '2px 4px', borderRadius: '3px' }}>Odds = (Segment Weight / Total Weight) * 100</code>.
+              To make a segment harder to hit, lower its weight. To disable a prize entirely without changing other segment angles, set its weight to <code style={{ background: 'var(--color-surface-raised)', padding: '2px 4px', borderRadius: '3px' }}>0</code>.
+            </p>
+
+            <h3 style={{ color: 'var(--color-gold)', margin: '0 0 10px', fontSize: '0.85rem', fontWeight: 700 }}>2. Managing Inventory</h3>
+            <p style={{ margin: '0 0 14px' }}>
+              Set a positive number to limit how many of a particular prize can be won. Once a prize's inventory hits <code style={{ background: 'var(--color-surface-raised)', padding: '2px 4px', borderRadius: '3px' }}>0</code>, the wheel automatically blacklists it, and rolls to the next eligible slice. Set inventory to <code style={{ background: 'var(--color-surface-raised)', padding: '2px 4px', borderRadius: '3px' }}>-1</code> for infinite/unlimited stock.
+            </p>
+
+            <h3 style={{ color: 'var(--color-gold)', margin: '0 0 10px', fontSize: '0.85rem', fontWeight: 700 }}>3. Granting Extra Spins</h3>
+            <p style={{ margin: '0 0 14px' }}>
+              In the **Unified Audit Ledger**, locate the customer and click **+1 Spin** under their Action column. This increments their allowed spins limit, resets their status, and enables them to spin again.
+            </p>
+
+            <h3 style={{ color: 'var(--color-gold)', margin: '0 0 10px', fontSize: '0.85rem', fontWeight: 700 }}>4. Staff Access Registry</h3>
+            <p style={{ margin: '0 0 14px' }}>
+              Add a staff member's email to pre-authorize them. They can then register their account under the **Staff** panel to scan and redeem tickets. Managers can only delete and create accounts with the **Staff** access level.
+            </p>
+
+            <h3 style={{ color: 'var(--color-gold)', margin: '0 0 10px', fontSize: '0.85rem', fontWeight: 700 }}>5. Generating Reports</h3>
+            <p style={{ margin: 0 }}>
+              Under **Redemption & Spin Audit Report**, select your desired start and end dates. Click **Print / Export PDF Report** to print a hardcopy summary ledger or save a digital PDF.
+            </p>
+          </div>
+        )}
       </section>
 
       {/* Hidden print report wrapper */}
