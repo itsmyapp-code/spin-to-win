@@ -670,25 +670,15 @@ function ResultCard({
 
           {/* Action buttons */}
           <div className="voucher-actions" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button
-                id="save-to-cloud-btn"
-                onClick={onSave}
-                disabled={saving || saved}
-                className={saved ? 'btn-sage' : 'btn-gold'}
-                style={{ flex: 1 }}
-              >
-                {saving ? '⏳ Saving…' : saved ? '✔ Saved to Cloud' : '☁ Save Win to Ledger'}
-              </button>
-              <button
-                id="print-voucher-btn"
-                onClick={onPrint}
-                className="btn-ghost"
-                style={{ flex: 1 }}
-              >
-                🖨 Print
-              </button>
-            </div>
+            <button
+              id="save-to-cloud-btn"
+              onClick={onSave}
+              disabled={saving || saved}
+              className={saved ? 'btn-sage' : 'btn-gold'}
+              style={{ width: '100%' }}
+            >
+              {saving ? '⏳ Saving…' : saved ? '✔ Saved to Cloud' : '☁ Save Win to Ledger'}
+            </button>
             
             {/* Save to Photos - fixes image saving */}
             <button
