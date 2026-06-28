@@ -250,6 +250,16 @@ export default function CustomerView({ token }: CustomerViewProps) {
     }
   }, [customer, spinResult]);
 
+  // Automatic reload page after 10 seconds when a win is shown
+  useEffect(() => {
+    if (spinResult) {
+      const timer = setTimeout(() => {
+        window.location.reload();
+      }, 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [spinResult]);
+
   // ─── Loading ────────────────────────────────────────────────────────────────
   if (authLoading || loading) {
     return (
@@ -355,6 +365,7 @@ export default function CustomerView({ token }: CustomerViewProps) {
         {/* Wheel Viewport placement - Lower/middle ergonomics */}
         <div style={{ marginTop: '10px', width: '100%', display: 'flex', justifyContent: 'center' }}>
           <WheelPanel
+            key={spinResult ? 'won' : 'idle'}
             prizes={config.prizes}
             disabled={isSpunOut && !isTestSession}
             onSpinComplete={handleSpinComplete}
