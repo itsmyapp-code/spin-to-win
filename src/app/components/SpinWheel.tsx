@@ -238,12 +238,12 @@ export default function SpinWheel({ prizes, onSpinComplete, disabled }: SpinWhee
                   fill={i % 2 === 0 ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.12)'}
                 />
                 {/* Label - simple and large for high readability */}
-                <g transform={buildLabelTransform(seg.midAngle)}>
+                 <g transform={buildLabelTransform(seg.midAngle)}>
                   <text
                     textAnchor="middle"
                     dominantBaseline="middle"
                     style={{
-                      fontSize: '32px',
+                      fontSize: '60px',
                       fill: '#F0EDE8',
                       paintOrder: 'stroke',
                       stroke: 'rgba(0,0,0,0.6)',
@@ -255,7 +255,7 @@ export default function SpinWheel({ prizes, onSpinComplete, disabled }: SpinWhee
                   <text
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    dy="32"
+                    dy="44"
                     style={{
                       fontSize: '16px',
                       fontFamily: 'JetBrains Mono, monospace',
