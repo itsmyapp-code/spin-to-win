@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import { initFirebase } from '@/lib/firebase';
-import { getWheelConfig, saveWheelConfig } from '@/lib/firestoreOps';
+import { getWheelConfig, saveWheelConfig, setStaffRole, deleteStaffRole } from '@/lib/firestoreOps';
 import { collection, query, orderBy, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import type { WheelConfig, PrizeTier, Customer } from '@/lib/types';
 import StaffAuthForm from './StaffAuthForm';
@@ -76,6 +76,58 @@ export default function ManagerDashboard() {
       setTimeout(() => setSaveMsg(null), 4000);
     }
   }, [user, editedPrizes, customTerms]);
+
+  const [rolesList, setRolesList] = useState<any[]>([]);
+  const [newStaffEmail, setNewStaffEmail] = useState('');
+  const [newStaffName, setNewStaffName] = useState('');
+  const [staffStatus, setStaffStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    const { db } = initFirebase();
+    const unsub = onSnapshot(collection(db, 'spinRoles'), (snap) => {
+      const list = snap.docs.map((doc) => ({
+        email: doc.id,
+        ...doc.data(),
+      }));
+      setRolesList(list);
+    });
+    return unsub;
+  }, [user]);
+
+  const handleAddStaff = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newStaffEmail.includes('@') || newStaffName.trim().length < 2) {
+      setStaffStatus('✗ Invalid email or name.');
+      return;
+    }
+    setStaffStatus('⏳ Adding...');
+    try {
+      const { db } = initFirebase();
+      await setStaffRole(db, newStaffEmail.trim().toLowerCase(), 'staff', newStaffName.trim());
+      setStaffStatus('✔ Staff added.');
+      setNewStaffEmail('');
+      setNewStaffName('');
+    } catch {
+      setStaffStatus('✗ Error adding staff access.');
+    }
+  }, [newStaffEmail, newStaffName]);
+
+  const handleDeleteStaff = useCallback(async (email: string) => {
+    const target = rolesList.find(r => r.email === email);
+    if (target && target.role !== 'staff') {
+      alert('Security: Managers can only manage staff access levels.');
+      return;
+    }
+    if (confirm(`Remove access for ${email}?`)) {
+      try {
+        const { db } = initFirebase();
+        await deleteStaffRole(db, email);
+      } catch {
+        alert('Error removing access.');
+      }
+    }
+  }, [rolesList]);
 
   const handleGrantExtraSpin = useCallback(async (c: Customer) => {
     const newAllowed = (c.allowedSpins ?? 1) + 1;
@@ -265,6 +317,104 @@ export default function ManagerDashboard() {
             rows={10}
             style={{ resize: 'vertical', lineHeight: '1.6', fontFamily: 'var(--font-mono)' }}
           />
+        </div>
+      </section>
+
+      {/* Staff Access Registry Section */}
+      <section style={{ marginBottom: '40px' }}>
+        <div style={{ marginBottom: '12px' }}>
+          <h2 style={{ color: 'var(--color-gold)', fontSize: '0.9rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>
+            Staff Access Registry
+          </h2>
+          <p style={{ color: 'var(--color-text-dim)', fontSize: '0.72rem', margin: '4px 0 0' }}>
+            Managers can authorize and manage Staff access here. Authorize emails to let them register themselves as Staff.
+          </p>
+        </div>
+
+        <div className="admin-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '24px', alignItems: 'start' }}>
+          {/* Add Staff form */}
+          <div className="glass" style={{ padding: '20px', borderRadius: '8px' }}>
+            <h3 style={{ color: 'var(--color-gold)', fontSize: '0.8rem', fontWeight: 700, marginBottom: '12px', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+              Authorize Staff Member
+            </h3>
+            <form onSubmit={handleAddStaff} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div>
+                <input
+                  type="email"
+                  value={newStaffEmail}
+                  onChange={(e) => setNewStaffEmail(e.target.value)}
+                  placeholder="Email (e.g. staff@itsmyapp.co.uk)"
+                  className="input-base"
+                  required
+                  style={{ fontSize: '0.78rem', padding: '8px 12px' }}
+                />
+              </div>
+              <div>
+                <input
+                  type="text"
+                  value={newStaffName}
+                  onChange={(e) => setNewStaffName(e.target.value)}
+                  placeholder="Staff Name (e.g. Sarah Connor)"
+                  className="input-base"
+                  required
+                  style={{ fontSize: '0.78rem', padding: '8px 12px' }}
+                />
+              </div>
+
+              {staffStatus && (
+                <div style={{
+                  fontSize: '0.72rem',
+                  color: staffStatus.startsWith('✔') ? 'var(--color-sage)' : 'var(--color-crimson)'
+                }}>
+                  {staffStatus}
+                </div>
+              )}
+
+              <button type="submit" className="btn-gold" style={{ fontSize: '0.75rem', padding: '8px 16px' }}>
+                + Authorize Staff
+              </button>
+            </form>
+          </div>
+
+          {/* Staff List */}
+          <div className="glass" style={{ borderRadius: '8px', overflow: 'hidden' }}>
+            <div style={{ maxHeight: '240px', overflowY: 'auto' }}>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Staff Name</th>
+                    <th>Email</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rolesList.filter((r) => r.role === 'staff').length === 0 ? (
+                    <tr>
+                      <td colSpan={3} style={{ textAlign: 'center', color: 'var(--color-text-dim)', padding: '16px', fontSize: '0.74rem' }}>
+                        No authorized staff members registered.
+                      </td>
+                    </tr>
+                  ) : (
+                    rolesList.filter((r) => r.role === 'staff').map((r) => (
+                      <tr key={r.email}>
+                        <td style={{ fontWeight: 600, fontSize: '0.76rem' }}>{r.displayName}</td>
+                        <td style={{ color: 'var(--color-text-secondary)', fontSize: '0.72rem' }}>{r.email}</td>
+                        <td>
+                          <button
+                            onClick={() => handleDeleteStaff(r.email)}
+                            className="btn-danger"
+                            style={{ fontSize: '0.55rem', padding: '2px 6px' }}
+                          >
+                            Remove
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </section>
 

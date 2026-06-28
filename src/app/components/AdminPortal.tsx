@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { initFirebase } from '@/lib/firebase';
-import { bulkCreateCustomers } from '@/lib/firestoreOps';
+import { bulkCreateCustomers, setStaffRole, deleteStaffRole } from '@/lib/firestoreOps';
+import { collection, onSnapshot } from 'firebase/firestore';
 import type { Customer } from '@/lib/types';
 import StaffAuthForm from './StaffAuthForm';
 function generateToken(): string {
@@ -53,6 +54,54 @@ export default function AdminPortal() {
   const [parseError, setParseError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<string | null>(null);
+
+  const [rolesList, setRolesList] = useState<any[]>([]);
+  const [newRoleEmail, setNewRoleEmail] = useState('');
+  const [newRoleName, setNewRoleName] = useState('');
+  const [newRoleType, setNewRoleType] = useState<'staff' | 'manager' | 'admin'>('manager');
+  const [roleStatus, setRoleStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    const { db } = initFirebase();
+    const unsub = onSnapshot(collection(db, 'spinRoles'), (snap) => {
+      const list = snap.docs.map((doc) => ({
+        email: doc.id,
+        ...doc.data(),
+      }));
+      setRolesList(list);
+    });
+    return unsub;
+  }, [user]);
+
+  const handleAddRole = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newRoleEmail.includes('@') || newRoleName.trim().length < 2) {
+      setRoleStatus('✗ Invalid email or name.');
+      return;
+    }
+    setRoleStatus('⏳ Adding...');
+    try {
+      const { db } = initFirebase();
+      await setStaffRole(db, newRoleEmail.trim().toLowerCase(), newRoleType, newRoleName.trim());
+      setRoleStatus('✔ Access added.');
+      setNewRoleEmail('');
+      setNewRoleName('');
+    } catch {
+      setRoleStatus('✗ Error adding access.');
+    }
+  }, [newRoleEmail, newRoleName, newRoleType]);
+
+  const handleDeleteRole = useCallback(async (email: string) => {
+    if (confirm(`Remove access for ${email}?`)) {
+      try {
+        const { db } = initFirebase();
+        await deleteStaffRole(db, email);
+      } catch {
+        alert('Error removing access.');
+      }
+    }
+  }, []);
 
 
   const handleParse = useCallback(() => {
@@ -236,6 +285,139 @@ export default function AdminPortal() {
           )}
         </div>
       </div>
+
+      {/* Access Control Registry Section */}
+      <section style={{ marginTop: '40px', borderTop: '1px solid var(--color-border)', paddingTop: '32px' }}>
+        <div style={{ marginBottom: '20px' }}>
+          <h2 style={{ color: 'var(--color-gold)', fontSize: '1.1rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 4px' }}>
+            Access Control Registry
+          </h2>
+          <p style={{ color: 'var(--color-text-dim)', fontSize: '0.75rem', margin: 0 }}>
+            Authorize and manage staff, manager, and admin logins dynamically. Users can sign up themselves once authorized here.
+          </p>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'start' }}>
+          {/* Add Authorization Form */}
+          <div className="glass" style={{ padding: '24px', borderRadius: '8px' }}>
+            <h3 style={{ color: 'var(--color-gold)', fontSize: '0.88rem', fontWeight: 700, marginBottom: '16px', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+              Authorize New Login
+            </h3>
+            <form onSubmit={handleAddRole} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label htmlFor="role-email" style={{ display: 'block', color: 'var(--color-text-secondary)', fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }}>
+                  Email Address
+                </label>
+                <input
+                  id="role-email"
+                  type="email"
+                  value={newRoleEmail}
+                  onChange={(e) => setNewRoleEmail(e.target.value)}
+                  placeholder="name@itsmyapp.co.uk"
+                  className="input-base"
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="role-name" style={{ display: 'block', color: 'var(--color-text-secondary)', fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }}>
+                  Full Name / Display Name
+                </label>
+                <input
+                  id="role-name"
+                  type="text"
+                  value={newRoleName}
+                  onChange={(e) => setNewRoleName(e.target.value)}
+                  placeholder="e.g. John Doe"
+                  className="input-base"
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="role-select" style={{ display: 'block', color: 'var(--color-text-secondary)', fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }}>
+                  Select Access Role
+                </label>
+                <select
+                  id="role-select"
+                  value={newRoleType}
+                  onChange={(e) => setNewRoleType(e.target.value as any)}
+                  className="input-base"
+                  style={{ background: 'var(--color-charcoal)', color: 'var(--color-text-primary)' }}
+                >
+                  <option value="staff">Staff (Verify/Redeem only)</option>
+                  <option value="manager">Manager (Adjust odds & terms)</option>
+                  <option value="admin">Admin (Full Control)</option>
+                </select>
+              </div>
+
+              {roleStatus && (
+                <div style={{
+                  fontSize: '0.75rem',
+                  color: roleStatus.startsWith('✔') ? 'var(--color-sage)' : 'var(--color-crimson)',
+                  marginTop: '4px'
+                }}>
+                  {roleStatus}
+                </div>
+              )}
+
+              <button type="submit" className="btn-gold" style={{ marginTop: '8px' }}>
+                + Authorize Access Role
+              </button>
+            </form>
+          </div>
+
+          {/* Current Authorized Users List */}
+          <div className="glass" style={{ borderRadius: '8px', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border)' }}>
+              <span className="badge-gold">{rolesList.length} Authorized Users</span>
+            </div>
+            <div style={{ maxHeight: '360px', overflowY: 'auto' }}>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rolesList.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} style={{ textAlign: 'center', color: 'var(--color-text-dim)', padding: '24px' }}>
+                        No authorized users found.
+                      </td>
+                    </tr>
+                  ) : (
+                    rolesList.map((r) => (
+                      <tr key={r.email}>
+                        <td style={{ fontWeight: 600 }}>{r.displayName}</td>
+                        <td style={{ color: 'var(--color-text-secondary)', fontSize: '0.72rem' }}>{r.email}</td>
+                        <td>
+                          <span className={r.role === 'admin' ? 'badge-gold' : r.role === 'manager' ? 'badge-sage' : 'badge-error'} style={{ fontSize: '0.62rem' }}>
+                            {r.role}
+                          </span>
+                        </td>
+                        <td>
+                          <button
+                            onClick={() => handleDeleteRole(r.email)}
+                            className="btn-danger"
+                            style={{ fontSize: '0.6rem', padding: '4px 8px' }}
+                            disabled={r.email === user?.email}
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Tip */}
       <div style={{ marginTop: '24px', padding: '14px 18px', borderRadius: '6px', background: 'rgba(197,168,107,0.05)', border: '1px solid rgba(197,168,107,0.15)', fontSize: '0.74rem', color: 'var(--color-text-dim)' }}>

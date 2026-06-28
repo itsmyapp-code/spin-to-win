@@ -12,6 +12,7 @@ import {
   limit,
   orderBy,
   serverTimestamp,
+  deleteDoc,
   Firestore,
 } from 'firebase/firestore';
 import type { Customer, WheelConfig, StaffRole, PrizeTier } from './types';
@@ -190,4 +191,11 @@ export async function setStaffRole(
     createdAt: new Date().toISOString(),
   };
   await setDoc(doc(db, ROLES_COL, email.toLowerCase()), staffRole);
+}
+
+export async function deleteStaffRole(
+  db: Firestore,
+  email: string
+): Promise<void> {
+  await deleteDoc(doc(db, ROLES_COL, email.toLowerCase()));
 }
