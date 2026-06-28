@@ -19,6 +19,8 @@ export default function ManagerDashboard() {
   const [sortField, setSortField] = useState<keyof Customer>('createdAt');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [customTerms, setCustomTerms] = useState('');
+  const [reportStart, setReportStart] = useState('');
+  const [reportEnd, setReportEnd] = useState('');
 
   useEffect(() => {
     if (!user || user.isAnonymous || !staffRole) return;
@@ -179,6 +181,65 @@ export default function ManagerDashboard() {
 
   const totalWeight = editedPrizes.reduce((s, p) => s + p.weight, 0);
 
+  // ─── Generate prize report data ──────────────────────────────────────────
+  const unifiedPrizesList: Array<{
+    customerName: string;
+    customerEmail: string;
+    prizeName: string;
+    prizeCode: string;
+    wonAt: string;
+    redeemedAt: string | null;
+    redeemedByEmail: string | null;
+  }> = [];
+
+  customers.forEach((c) => {
+    if (c.prizesWon && c.prizesWon.length > 0) {
+      c.prizesWon.forEach((p) => {
+        unifiedPrizesList.push({
+          customerName: c.name,
+          customerEmail: c.email,
+          prizeName: p.prizeName,
+          prizeCode: p.prizeCode,
+          wonAt: p.wonAt,
+          redeemedAt: p.redeemedAt || null,
+          redeemedByEmail: p.redeemedByEmail || null,
+        });
+      });
+    } else if (c.prizeCode) {
+      unifiedPrizesList.push({
+        customerName: c.name,
+        customerEmail: c.email,
+        prizeName: c.prizeName || '—',
+        prizeCode: c.prizeCode,
+        wonAt: c.createdAt || new Date().toISOString(),
+        redeemedAt: c.redeemedAt || null,
+        redeemedByEmail: c.redeemedByEmail || null,
+      });
+    }
+  });
+
+  const reportStartVal = reportStart ? new Date(reportStart) : null;
+  const reportEndVal = reportEnd ? new Date(reportEnd) : null;
+  if (reportEndVal) reportEndVal.setHours(23, 59, 59, 999);
+
+  const filteredPrizes = unifiedPrizesList.filter((p) => {
+    const d = new Date(p.wonAt);
+    if (reportStartVal && d < reportStartVal) return false;
+    if (reportEndVal && d > reportEndVal) return false;
+    return true;
+  });
+
+  const filteredCustomersForSpins = customers.filter((c) => {
+    const d = c.createdAt ? new Date(c.createdAt) : new Date();
+    if (reportStartVal && d < reportStartVal) return false;
+    if (reportEndVal && d > reportEndVal) return false;
+    return true;
+  });
+
+  const reportRedeemed = filteredPrizes.filter((p) => p.redeemedAt).length;
+  const reportOutstanding = filteredPrizes.filter((p) => !p.redeemedAt).length;
+  const reportOutstandingSpins = filteredCustomersForSpins.reduce((acc, c) => acc + Math.max(0, (c.allowedSpins ?? 1) - (c.spinsCount ?? 0)), 0);
+
   return (
     <div className="manager-content" style={{ padding: '24px 32px', maxWidth: '1400px', margin: '0 auto' }}>
 
@@ -295,6 +356,84 @@ export default function ManagerDashboard() {
               })}
             </tbody>
           </table>
+        </div>
+      </section>
+
+      {/* Exportable Redemption & Spin Report Section */}
+      <section style={{ marginBottom: '40px' }}>
+        <div style={{ marginBottom: '12px' }}>
+          <h2 style={{ color: 'var(--color-gold)', fontSize: '0.9rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>
+            Redemption & Spin Audit Report
+          </h2>
+          <p style={{ color: 'var(--color-text-dim)', fontSize: '0.72rem', margin: '4px 0 0' }}>
+            Generate a printable report summarizing all redeemed prizes, outstanding wins, and pending spins within a date range.
+          </p>
+        </div>
+
+        <div className="glass" style={{ padding: '20px', borderRadius: '8px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>From:</span>
+              <input
+                type="date"
+                value={reportStart}
+                onChange={(e) => setReportStart(e.target.value)}
+                className="input-base"
+                style={{ width: 'auto', padding: '6px 12px', fontSize: '0.78rem' }}
+                aria-label="Report start date"
+              />
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>To:</span>
+              <input
+                type="date"
+                value={reportEnd}
+                onChange={(e) => setReportEnd(e.target.value)}
+                className="input-base"
+                style={{ width: 'auto', padding: '6px 12px', fontSize: '0.78rem' }}
+                aria-label="Report end date"
+              />
+            </div>
+
+            <button
+              onClick={() => window.print()}
+              className="btn-gold"
+              style={{ fontSize: '0.75rem', padding: '8px 16px', marginLeft: 'auto' }}
+            >
+              🖨 Print / Export PDF Report
+            </button>
+          </div>
+
+          {/* Mini Report Summary Preview */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+            <div style={{ background: 'rgba(45, 99, 77, 0.05)', border: '1px solid rgba(45, 99, 77, 0.15)', padding: '16px', borderRadius: '4px' }}>
+              <p style={{ margin: 0, fontSize: '0.68rem', color: 'var(--color-sage)', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                Redeemed (Selected Range)
+              </p>
+              <p style={{ margin: '8px 0 0', fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
+                {reportRedeemed} <span style={{ fontSize: '0.8rem', fontWeight: 'normal', color: 'var(--color-text-secondary)' }}>vouchers</span>
+              </p>
+            </div>
+
+            <div style={{ background: 'rgba(150, 112, 45, 0.05)', border: '1px solid rgba(150, 112, 45, 0.15)', padding: '16px', borderRadius: '4px' }}>
+              <p style={{ margin: 0, fontSize: '0.68rem', color: 'var(--color-gold)', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                Outstanding Unclaimed
+              </p>
+              <p style={{ margin: '8px 0 0', fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
+                {reportOutstanding} <span style={{ fontSize: '0.8rem', fontWeight: 'normal', color: 'var(--color-text-secondary)' }}>vouchers</span>
+              </p>
+            </div>
+
+            <div style={{ background: 'rgba(28, 27, 25, 0.03)', border: '1px solid var(--color-border)', padding: '16px', borderRadius: '4px' }}>
+              <p style={{ margin: 0, fontSize: '0.68rem', color: 'var(--color-text-secondary)', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                Outstanding Spins Left
+              </p>
+              <p style={{ margin: '8px 0 0', fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
+                {reportOutstandingSpins} <span style={{ fontSize: '0.8rem', fontWeight: 'normal', color: 'var(--color-text-secondary)' }}>spins</span>
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -589,6 +728,76 @@ export default function ManagerDashboard() {
           </table>
         </div>
       </section>
+
+      {/* Hidden print report wrapper */}
+      <div id="report-print" style={{ display: 'none' }}>
+        <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: '0 0 6px' }}>ITS MY APP</h1>
+        <p style={{ fontSize: '14px', margin: '0 0 20px', color: '#666' }}>Promotional Spin & Redemption Audit Report</p>
+        
+        <div style={{ borderBottom: '2px solid #333', paddingBottom: '12px', marginBottom: '20px' }}>
+          <p style={{ margin: '4px 0', fontSize: '12px' }}>
+            <strong>Generated:</strong> {new Date().toLocaleString('en-GB')}
+          </p>
+          <p style={{ margin: '4px 0', fontSize: '12px' }}>
+            <strong>Date Range:</strong> {reportStart ? reportStart : 'All Time'} to {reportEnd ? reportEnd : 'All Time'}
+          </p>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '30px', borderBottom: '1px solid #ddd', paddingBottom: '20px' }}>
+          <div>
+            <span style={{ fontSize: '11px', textTransform: 'uppercase', color: '#666' }}>Redeemed Vouchers</span>
+            <p style={{ fontSize: '24px', fontWeight: 'bold', margin: '4px 0' }}>{reportRedeemed}</p>
+          </div>
+          <div>
+            <span style={{ fontSize: '11px', textTransform: 'uppercase', color: '#666' }}>Outstanding Unclaimed Vouchers</span>
+            <p style={{ fontSize: '24px', fontWeight: 'bold', margin: '4px 0' }}>{reportOutstanding}</p>
+          </div>
+          <div>
+            <span style={{ fontSize: '11px', textTransform: 'uppercase', color: '#666' }}>Outstanding Spins Remaining</span>
+            <p style={{ fontSize: '24px', fontWeight: 'bold', margin: '4px 0' }}>{reportOutstandingSpins}</p>
+          </div>
+        </div>
+
+        <h3 style={{ fontSize: '16px', fontWeight: 'bold', margin: '0 0 10px' }}>Voucher Ledgers ({filteredPrizes.length})</h3>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid #333', textAlign: 'left' }}>
+              <th style={{ padding: '6px' }}>Customer Name</th>
+              <th style={{ padding: '6px' }}>Email</th>
+              <th style={{ padding: '6px' }}>Prize Won</th>
+              <th style={{ padding: '6px' }}>Code</th>
+              <th style={{ padding: '6px' }}>Won Date</th>
+              <th style={{ padding: '6px' }}>Redemption Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredPrizes.length === 0 ? (
+              <tr>
+                <td colSpan={6} style={{ padding: '20px', textAlign: 'center' }}>No vouchers won in this period.</td>
+              </tr>
+            ) : (
+              filteredPrizes.map((p, idx) => (
+                <tr key={idx} style={{ borderBottom: '1px solid #eee' }}>
+                  <td style={{ padding: '6px', fontWeight: 'bold' }}>{p.customerName}</td>
+                  <td style={{ padding: '6px' }}>{p.customerEmail}</td>
+                  <td style={{ padding: '6px' }}>{p.prizeName}</td>
+                  <td style={{ padding: '6px' }}><code style={{ fontFamily: 'monospace', fontWeight: 'bold' }}>{p.prizeCode}</code></td>
+                  <td style={{ padding: '6px' }}>{new Date(p.wonAt).toLocaleDateString('en-GB')} {new Date(p.wonAt).toLocaleTimeString('en-GB')}</td>
+                  <td style={{ padding: '6px' }}>
+                    {p.redeemedAt ? (
+                      <span style={{ color: '#2d634d', fontWeight: 'bold' }}>
+                        Redeemed ({new Date(p.redeemedAt).toLocaleDateString('en-GB')}) {p.redeemedByEmail ? `by ${p.redeemedByEmail}` : ''}
+                      </span>
+                    ) : (
+                      <span style={{ color: '#96702d', fontWeight: 'bold' }}>UNCLAIMED</span>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
