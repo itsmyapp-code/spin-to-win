@@ -349,35 +349,62 @@ export default function SlotMachine({ prizes, disabled, onComplete }: SlotMachin
             alignItems: 'center',
             justifyContent: 'flex-start',
             position: 'relative',
+            height: '180px',
           }}
         >
-          {/* Slot lever shaft */}
-          <div
-            style={{
-              width: '8px',
-              height: '120px',
-              background: 'linear-gradient(90deg, #52525B, #A1A1AA, #3F3F46)',
-              borderRadius: '4px',
-              transform: `scaleY(${1 + (dragY / 150) * 0.2}) translateY(${dragY * 0.3}px)`,
-              transformOrigin: 'top center',
-              transition: isDragging.current ? 'none' : 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-            }}
-          />
-          {/* Lever handle knob */}
+          {/* Pivot Base socket */}
           <div
             style={{
               position: 'absolute',
-              top: '100px',
-              width: '32px',
-              height: '32px',
+              bottom: '15px',
+              width: '24px',
+              height: '24px',
               borderRadius: '50%',
-              background: 'radial-gradient(circle at 10px 10px, #E05D5D, #8B2020)',
+              background: 'radial-gradient(circle at 6px 6px, #52525B, #18181B)',
               border: '2px solid #000',
-              boxShadow: '0 4px 8px rgba(0,0,0,0.4)',
-              transform: `translateY(${dragY * 0.5}px)`,
-              transition: isDragging.current ? 'none' : 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+              zIndex: 5,
             }}
           />
+
+          {/* Rotating Lever Arm */}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: '25px', // Anchor near the pivot socket
+              width: '32px',
+              height: '120px',
+              transformOrigin: 'center 110px', // Rotate around pivot
+              transform: `rotate(${spinState === 'spinning' ? 60 : -35 + Math.min(95, (dragY / 120) * 95)}deg)`,
+              transition: isDragging.current ? 'none' : 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              zIndex: 4,
+            }}
+          >
+            {/* Lever knob (at the top of the arm) */}
+            <div
+              style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '50%',
+                background: 'radial-gradient(circle at 8px 8px, #E05D5D, #8B2020)',
+                border: '2px solid #000',
+                boxShadow: '0 4px 8px rgba(0,0,0,0.4)',
+              }}
+            />
+
+            {/* Lever shaft */}
+            <div
+              style={{
+                width: '8px',
+                height: '92px',
+                background: 'linear-gradient(90deg, #52525B, #A1A1AA, #3F3F46)',
+                borderRadius: '4px',
+                marginTop: '-4px', // Connect directly to knob
+              }}
+            />
+          </div>
         </div>
       </div>
 
