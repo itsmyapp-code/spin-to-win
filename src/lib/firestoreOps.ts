@@ -107,7 +107,33 @@ export async function getCustomerByCode(
   db: Firestore,
   code: string
 ): Promise<Customer | null> {
-  // First attempt direct check
+  const cleanCode = code.replace(/[^A-Z0-9]/g, '');
+
+  // 1. 6-digit range query
+  if (/^\d{6}$/.test(cleanCode)) {
+    const q = query(
+      collection(db, CUSTOMERS_COL),
+      where('prizeCode', '>=', `WIN-${cleanCode}-`),
+      where('prizeCode', '<=', `WIN-${cleanCode}-\uf8ff`),
+      limit(1)
+    );
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+      return snap.docs[0].data() as Customer;
+    }
+
+    // Fallback scan
+    const allSnap = await getDocs(query(collection(db, CUSTOMERS_COL)));
+    for (const d of allSnap.docs) {
+      const c = d.data() as Customer;
+      if (c.prizesWon?.some((p) => p.prizeCode.includes(`-${cleanCode}-`))) {
+        return c;
+      }
+    }
+    return null;
+  }
+
+  // 2. Exact match check
   const q = query(
     collection(db, CUSTOMERS_COL),
     where('prizeCode', '==', code),
@@ -118,7 +144,7 @@ export async function getCustomerByCode(
     return snap.docs[0].data() as Customer;
   }
 
-  // Fallback: Scan in-memory (useful for redeeming non-last spins)
+  // Fallback in-memory scan
   const allSnap = await getDocs(query(collection(db, CUSTOMERS_COL)));
   for (const d of allSnap.docs) {
     const c = d.data() as Customer;

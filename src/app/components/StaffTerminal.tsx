@@ -33,8 +33,8 @@ export default function StaffTerminal() {
   }, []);
 
   const handleVerify = useCallback(async () => {
-    const code = codeInput.replace(/-/g, '').toUpperCase();
-    if (code.length < 9) return;
+    const cleanCode = codeInput.replace(/[^A-Z0-9]/g, '').toUpperCase();
+    if (cleanCode.length < 6) return;
 
     setVerifyState('loading');
     try {
@@ -47,24 +47,30 @@ export default function StaffTerminal() {
       }
 
       // Check the specific prize matching the code
-      const matchedPrize = customer.prizesWon?.find((p) => p.prizeCode === codeInput) || 
-        (customer.prizeCode === codeInput ? {
-          prizeId: customer.prizeId,
-          prizeName: customer.prizeName,
-          prizeCode: customer.prizeCode,
-          redeemedAt: customer.redeemedAt,
-          redeemedByEmail: customer.redeemedByEmail,
-        } : null);
+      const matchedPrize = customer.prizesWon?.find((p) => 
+        p.prizeCode === codeInput || (cleanCode.length === 6 && p.prizeCode.includes(`-${cleanCode}-`))
+      ) || ((customer.prizeCode === codeInput || (cleanCode.length === 6 && customer.prizeCode?.includes(`-${cleanCode}-`))) ? {
+        prizeId: customer.prizeId,
+        prizeName: customer.prizeName,
+        prizeCode: customer.prizeCode || '',
+        redeemedAt: customer.redeemedAt,
+        redeemedByEmail: customer.redeemedByEmail,
+      } : null);
 
-      if (!matchedPrize) {
+      if (!matchedPrize || !matchedPrize.prizeCode) {
         setVerifyState('not_found');
         setFoundCustomer(null);
-      } else if (matchedPrize.redeemedAt) {
-        setVerifyState('already_redeemed');
-        setFoundCustomer(customer);
       } else {
-        setVerifyState('valid');
-        setFoundCustomer(customer);
+        // Auto-complete field to the full code
+        setCodeInput(matchedPrize.prizeCode);
+
+        if (matchedPrize.redeemedAt) {
+          setVerifyState('already_redeemed');
+          setFoundCustomer(customer);
+        } else {
+          setVerifyState('valid');
+          setFoundCustomer(customer);
+        }
       }
     } catch {
       setVerifyState('not_found');
@@ -161,7 +167,7 @@ export default function StaffTerminal() {
             onChange={handleCodeChange}
             onKeyDown={(e) => e.key === 'Enter' && handleVerify()}
             className="input-base"
-            placeholder="WIN-000000-P0"
+            placeholder="e.g. 545638 or full code"
             maxLength={16}
             style={{
               fontSize: '1.2rem',
@@ -177,13 +183,16 @@ export default function StaffTerminal() {
           <button
             id="verify-btn"
             onClick={handleVerify}
-            disabled={codeInput.length < 10 || verifyState === 'loading' || verifyState === 'burned'}
+            disabled={codeInput.replace(/[^A-Z0-9]/g, '').length < 6 || verifyState === 'loading' || verifyState === 'burned'}
             className="btn-gold"
             style={{ whiteSpace: 'nowrap', minWidth: '120px' }}
           >
             {verifyState === 'loading' ? '⏳ Checking…' : '✦ Verify'}
           </button>
         </div>
+        <p style={{ color: 'var(--color-text-dim)', fontSize: '0.65rem', marginTop: '10px', marginBottom: 0 }}>
+          💡 <strong>Tip:</strong> You can enter just the 6-digit number from the voucher to verify!
+        </p>
       </div>
 
       {/* Verification result */}
