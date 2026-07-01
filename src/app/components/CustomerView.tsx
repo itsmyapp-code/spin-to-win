@@ -335,10 +335,11 @@ export default function CustomerView({ token }: CustomerViewProps) {
   const gameType = config.gameType || 'wheel';
 
   return (
-    <div className="animate-fade-in" style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      
+    <>
       {/* Confetti overlay on winning a non-P6 prize */}
       {spinResult && spinResult.prize.id !== 'P6' && <ConfettiEffect />}
+
+      <div className="animate-fade-in" style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
       {/* Top Section: ResultCard (if won/lost) or Welcome (if fresh/idle) */}
       <div style={{ width: '100%' }}>
@@ -446,7 +447,7 @@ export default function CustomerView({ token }: CustomerViewProps) {
               🎁 Your Won Prizes ({customer.prizesWon.length})
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {customer.prizesWon.map((p, idx) => {
+              {[...customer.prizesWon].reverse().map((p, idx) => {
                 const matchedPrize = config.prizes.find(x => x.id === p.prizeId);
                 return (
                   <div 
@@ -483,73 +484,76 @@ export default function CustomerView({ token }: CustomerViewProps) {
         )}
       </div>
     </div>
+  </div>
 
-      {/* Cinematic scale-in post-win transition overlay */}
-      {showWinOverlay && spinResult && (
+    {/* Cinematic scale-in post-win transition overlay */}
+    {showWinOverlay && spinResult && (
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(7,7,10,0.85)',
+          backdropFilter: 'blur(16px)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'center',
+          padding: '60px 20px',
+          overflowY: 'auto',
+        }}
+        className="animate-fade-in"
+      >
         <div
+          className="glass animate-fade-in-scale"
           style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(7,7,10,0.85)',
-            backdropFilter: 'blur(16px)',
-            zIndex: 100,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px',
+            maxWidth: '500px',
+            width: '100%',
+            padding: '28px',
+            borderRadius: '12px',
+            border: `2px solid var(--color-gold)`,
+            boxShadow: '0 0 50px rgba(197, 168, 107, 0.25)',
+            position: 'relative',
+            marginBottom: '40px',
           }}
-          className="animate-fade-in"
         >
-          <div
-            className="glass animate-fade-in-scale"
+          <button
+            onClick={() => setShowWinOverlay(false)}
             style={{
-              maxWidth: '500px',
-              width: '100%',
-              padding: '28px',
-              borderRadius: '12px',
-              border: `2px solid var(--color-gold)`,
-              boxShadow: '0 0 50px rgba(197, 168, 107, 0.25)',
-              position: 'relative',
+              position: 'absolute',
+              top: '16px',
+              right: '16px',
+              background: 'none',
+              border: 'none',
+              color: 'var(--color-text-dim)',
+              fontSize: '1.5rem',
+              cursor: 'pointer',
+              lineHeight: 1,
             }}
+            aria-label="Close win overlay"
           >
-            <button
-              onClick={() => setShowWinOverlay(false)}
-              style={{
-                position: 'absolute',
-                top: '16px',
-                right: '16px',
-                background: 'none',
-                border: 'none',
-                color: 'var(--color-text-dim)',
-                fontSize: '1.5rem',
-                cursor: 'pointer',
-                lineHeight: 1,
-              }}
-              aria-label="Close win overlay"
-            >
-              ×
-            </button>
+            ×
+          </button>
 
-            <ResultCard
-              customer={customer}
-              spinResult={spinResult}
-              saving={saving}
-              saved={saved}
-              onSave={handleSaveToCloud}
-              onPrint={handlePrint}
-              onSaveImage={handleSaveImage}
-              alreadySpun={false}
-              spinsLeft={spinsLeft}
-              onSpinAgain={() => {
-                setSpinResult(null);
-                setShowWinOverlay(false);
-              }}
-            />
-          </div>
+          <ResultCard
+            customer={customer}
+            spinResult={spinResult}
+            saving={saving}
+            saved={saved}
+            onSave={handleSaveToCloud}
+            onPrint={handlePrint}
+            onSaveImage={handleSaveImage}
+            alreadySpun={false}
+            spinsLeft={spinsLeft}
+            onSpinAgain={() => {
+              setSpinResult(null);
+              setShowWinOverlay(false);
+            }}
+          />
         </div>
-      )}
-    </div>
-  );
+      </div>
+    )}
+  </>
+);
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -705,15 +709,6 @@ function ResultCard({
 
           {/* Action buttons */}
           <div className="voucher-actions" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <button
-              id="save-to-cloud-btn"
-              onClick={onSave}
-              disabled={saving || saved}
-              className={saved ? 'btn-sage' : 'btn-gold'}
-              style={{ width: '100%' }}
-            >
-              {saving ? '⏳ Saving…' : saved ? '✔ Saved to Cloud' : '☁ Save Win to Ledger'}
-            </button>
             
             {/* Save to Photos - fixes image saving */}
             <button
@@ -729,7 +724,7 @@ function ResultCard({
                 color: 'var(--color-gold)'
               }}
             >
-              📥 Save to Photos (Download PNG)
+              📥 Download Win Voucher (PNG)
             </button>
 
             {/* Spin Again button if multi-spins are left */}
