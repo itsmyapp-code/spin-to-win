@@ -267,25 +267,57 @@ export default function StaffTerminal() {
         <div className="animate-fade-in-scale" style={{
           padding: '28px',
           borderRadius: '8px',
-          background: 'var(--color-sage-ghost)',
-          border: '1px solid rgba(83,135,115,0.6)',
-          textAlign: 'center',
+          background: 'linear-gradient(135deg, rgba(20,20,22,0.9) 0%, rgba(30,20,20,0.95) 100%)',
+          border: '2px solid #8B2020',
+          boxShadow: 'inset 0 0 30px rgba(0,0,0,0.95), 0 0 15px rgba(224,93,93,0.15)',
+          position: 'relative',
+          overflow: 'hidden',
+          marginBottom: '20px',
         }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>✅</div>
-          <h3 style={{ color: 'var(--color-sage)', fontSize: '1rem', letterSpacing: '0.08em', margin: '0 0 8px' }}>
-            VOUCHER REDEEMED
-          </h3>
-          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem', lineHeight: 1.7, margin: '0 0 16px' }}>
-            {foundCustomer.name}'s voucher for{' '}
-            <strong style={{ color: 'var(--color-text-primary)' }}>{matchedPrize?.prizeName}</strong>{' '}
-            has been marked as redeemed.<br />
-            <span style={{ color: 'var(--color-text-dim)', fontSize: '0.72rem' }}>
-              UTC: {matchedPrize?.redeemedAt ? new Date(matchedPrize.redeemedAt).toUTCString() : new Date().toUTCString()}
-            </span>
-          </p>
-          <button id="reset-terminal-btn" onClick={handleReset} className="btn-gold" style={{ minWidth: '200px' }}>
-            ↩ New Verification
-          </button>
+          {/* Burned Stamp */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '40%',
+              left: '50%',
+              transform: 'translate(-50%, -50%) rotate(-10deg)',
+              border: '4px dashed #E05D5D',
+              borderRadius: '8px',
+              padding: '10px 20px',
+              color: '#E05D5D',
+              fontSize: 'min(1.8rem, 6vw)',
+              fontWeight: 900,
+              textTransform: 'uppercase',
+              pointerEvents: 'none',
+              zIndex: 10,
+              backgroundColor: 'rgba(15, 10, 10, 0.95)',
+              boxShadow: '0 0 25px rgba(224,93,93,0.4)',
+              letterSpacing: '0.12em',
+              whiteSpace: 'nowrap',
+              fontFamily: 'monospace',
+            }}
+          >
+            🔥 BURNED & REDEEMED
+          </div>
+
+          <div style={{ opacity: 0.25, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px', pointerEvents: 'none' }}>
+            <InfoRow label="Customer Name" value={foundCustomer.name} />
+            <InfoRow label="Email" value={foundCustomer.email} />
+            <InfoRow label="Prize" value={matchedPrize?.prizeName ?? '—'} />
+            <InfoRow label="Code" value={matchedPrize?.prizeCode ?? '—'} />
+          </div>
+
+          <div style={{ position: 'relative', zIndex: 11, textAlign: 'center', marginTop: '16px' }}>
+            <h3 style={{ color: '#E05D5D', fontSize: '1rem', letterSpacing: '0.08em', margin: '0 0 8px', fontWeight: 'bold' }}>
+              VOUCHER DESTROYED SUCCESSFULLY
+            </h3>
+            <p style={{ color: 'var(--color-text-dim)', fontSize: '0.72rem', margin: '0 0 20px' }}>
+              Redeemed by: {user.email} · UTC: {matchedPrize?.redeemedAt ? new Date(matchedPrize.redeemedAt).toUTCString() : new Date().toUTCString()}
+            </p>
+            <button id="reset-terminal-btn" onClick={handleReset} className="btn-gold" style={{ minWidth: '200px' }}>
+              ↩ New Verification
+            </button>
+          </div>
         </div>
       )}
     </div>
