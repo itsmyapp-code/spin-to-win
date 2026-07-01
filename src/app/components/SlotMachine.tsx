@@ -193,11 +193,13 @@ export default function SlotMachine({ prizes, disabled, onComplete }: SlotMachin
 
       // Set target scroll offset (Item height: 100, gap: 12, centering: 40px offset)
       // translateY = 40 - (16 * 112) = -1752px
-      setOffsets(prev => {
-        const next = [...prev];
-        next[index] = 40 - (16 * 112);
-        return next;
-      });
+      setTimeout(() => {
+        setOffsets(prev => {
+          const next = [...prev];
+          next[index] = 40 - (16 * 112);
+          return next;
+        });
+      }, 50);
 
       // Reel tickers during spin
       const ticksInterval = setInterval(() => {

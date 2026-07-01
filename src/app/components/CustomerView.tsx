@@ -85,6 +85,7 @@ export default function CustomerView({ token }: CustomerViewProps) {
       const maxSpins = customer.allowedSpins ?? 1;
       const spinStatus = newSpinsCount >= maxSpins ? 'spun' : 'fresh';
 
+      const isLoser = prize.id === 'P6';
       const newPrizeWonItem = {
         prizeId: prize.id,
         prizeName: prize.name,
@@ -94,7 +95,13 @@ export default function CustomerView({ token }: CustomerViewProps) {
         wonAt: new Date().toISOString(),
       };
 
-      const updatedPrizesWon = [...(customer.prizesWon || []), newPrizeWonItem];
+      const updatedPrizesWon = isLoser
+        ? (customer.prizesWon || [])
+        : [...(customer.prizesWon || []), newPrizeWonItem];
+
+      const savePrizeId = isLoser ? '' : prize.id;
+      const savePrizeName = isLoser ? '' : prize.name;
+      const savePrizeCode = isLoser ? '' : prizeCode;
 
       // Set spinResult to open overlay
       setSpinResult({ prize, code: prizeCode });
@@ -103,17 +110,17 @@ export default function CustomerView({ token }: CustomerViewProps) {
       try {
         const { db } = initFirebase();
         if (isTestSession) {
-          await saveSpinResult(db, customer.id, prize.id, prize.name, prizeCode, newSpinsCount, 'fresh', updatedPrizesWon);
+          await saveSpinResult(db, customer.id, savePrizeId, savePrizeName, savePrizeCode, newSpinsCount, 'fresh', updatedPrizesWon);
         } else {
-          await saveSpinResult(db, customer.id, prize.id, prize.name, prizeCode, newSpinsCount, spinStatus, updatedPrizesWon);
+          await saveSpinResult(db, customer.id, savePrizeId, savePrizeName, savePrizeCode, newSpinsCount, spinStatus, updatedPrizesWon);
         }
         setCustomer((prev) => prev ? {
           ...prev,
           spinsCount: newSpinsCount,
           spinStatus: isTestSession ? 'fresh' : spinStatus,
-          prizeId: prize.id,
-          prizeName: prize.name,
-          prizeCode,
+          prizeId: isLoser ? null : prize.id,
+          prizeName: isLoser ? null : prize.name,
+          prizeCode: isLoser ? null : prizeCode,
           prizesWon: updatedPrizesWon
         } : prev);
       } catch (e) {
@@ -638,7 +645,7 @@ function ResultCard({
       <div style={{ textAlign: 'center', marginBottom: '24px' }}>
         <div style={{ fontSize: '3rem', marginBottom: '8px' }}>{spinResult.prize.emoji}</div>
         <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.7rem', letterSpacing: '0.15em', textTransform: 'uppercase', margin: '0 0 6px' }}>
-          {alreadySpun ? 'Your Recorded Result' : 'Congratulations!'}
+          {isLoser ? (alreadySpun ? 'Your Recorded Result' : 'Try Again! 🍀') : (alreadySpun ? 'Your Recorded Result' : 'Congratulations!')}
         </p>
         <h2 style={{
           color: isLoser ? 'var(--color-text-secondary)' : 'var(--color-gold)',
