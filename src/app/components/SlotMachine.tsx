@@ -70,12 +70,20 @@ export default function SlotMachine({ prizes, disabled, onComplete }: SlotMachin
   // Initialize reel symbols
   useEffect(() => {
     const list = [...prizes];
-    // Fill each reel initially with a random order
+    if (list.length === 0) return;
+    const makeStrip = () => {
+      let strip: PrizeTier[] = [];
+      while (strip.length < 24) {
+        strip = [...strip, ...[...list].sort(() => Math.random() - 0.5)];
+      }
+      return strip;
+    };
     setReelSymbols([
-      [...list].sort(() => Math.random() - 0.5),
-      [...list].sort(() => Math.random() - 0.5),
-      [...list].sort(() => Math.random() - 0.5),
+      makeStrip(),
+      makeStrip(),
+      makeStrip(),
     ]);
+    setOffsets([-72, -72, -72]);
   }, [prizes]);
 
   // Touch / pointer drag start
@@ -162,6 +170,15 @@ export default function SlotMachine({ prizes, disabled, onComplete }: SlotMachin
     const spinDurations = [2000, 2600, 3200]; // sequential stop times
 
     spinDurations.forEach((duration, index) => {
+      // Place target symbol at index 16 on the strip
+      setReelSymbols(prev => {
+        const next = [...prev];
+        const newStrip = [...next[index]];
+        newStrip[16] = targets[index];
+        next[index] = newStrip;
+        return next;
+      });
+
       // Start blur and scaling
       setBlurs(prev => {
         const next = [...prev];
@@ -174,11 +191,11 @@ export default function SlotMachine({ prizes, disabled, onComplete }: SlotMachin
         return next;
       });
 
-      // Spin rotation mock offset
-      const targetOffset = 3600 + index * 400;
+      // Set target scroll offset (Item height: 100, gap: 12, centering: 40px offset)
+      // translateY = 40 - (16 * 112) = -1752px
       setOffsets(prev => {
         const next = [...prev];
-        next[index] = targetOffset;
+        next[index] = 40 - (16 * 112);
         return next;
       });
 
@@ -190,7 +207,7 @@ export default function SlotMachine({ prizes, disabled, onComplete }: SlotMachin
       setTimeout(() => {
         clearInterval(ticksInterval);
         
-        // Stop spin, reset blur/scale with elastic snap
+        // Stop spin, reset blur/scale
         setBlurs(prev => {
           const next = [...prev];
           next[index] = 0;
@@ -202,16 +219,6 @@ export default function SlotMachine({ prizes, disabled, onComplete }: SlotMachin
           return next;
         });
 
-        // Set final reel symbol at center
-        setReelSymbols(prev => {
-          const next = [...prev];
-          const newReel = [...next[index]];
-          // Place target symbol at display position
-          newReel[1] = targets[index];
-          next[index] = newReel;
-          return next;
-        });
-
         playTickSound(900); // Loud stop click
 
         // If last reel is completed, finish game
@@ -219,6 +226,23 @@ export default function SlotMachine({ prizes, disabled, onComplete }: SlotMachin
           setTimeout(() => {
             setSpinState('complete');
             playWinChime();
+
+            // Perform silent instant reset for all 3 reels
+            for (let r = 0; r < 3; r++) {
+              setReelSymbols(prev => {
+                const next = [...prev];
+                const newStrip = [...next[r]];
+                newStrip[1] = targets[r];
+                next[r] = newStrip;
+                return next;
+              });
+              setOffsets(prev => {
+                const next = [...prev];
+                next[r] = -72; // Reset back to centered index 1 offset
+                return next;
+              });
+            }
+
             onComplete(selectedPrize, prizeCode);
           }, 400);
         }
@@ -284,7 +308,6 @@ export default function SlotMachine({ prizes, disabled, onComplete }: SlotMachin
           {/* 3 Reels */}
           {[0, 1, 2].map((index) => {
             const symbols = reelSymbols[index] || [];
-            const displaySymbol = symbols[1] || prizes[0];
 
             return (
               <div
@@ -297,43 +320,55 @@ export default function SlotMachine({ prizes, disabled, onComplete }: SlotMachin
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  justifyContent: 'center',
+                  justifyContent: 'flex-start',
                   position: 'relative',
                   overflow: 'hidden',
                   boxShadow: 'inset 0 0 16px rgba(0,0,0,0.9)',
                 }}
               >
-                {/* Reel Strip Wrapper with motion blur & translation */}
+                {/* Reel Strip Wrapper with motion blur & vertical scrolling */}
                 <div
                   style={{
-                    transform: `translateY(${dragY * 0.4}px) rotateX(${offsets[index]}deg)`,
+                    transform: `translateY(${offsets[index] + dragY * 0.4}px)`,
                     transition: spinState === 'spinning' 
-                      ? `transform 0.05s linear, rotateX ${[2, 2.6, 3.2][index]}s cubic-bezier(0.15, 0.85, 0.25, 1.12)` 
-                      : 'transform 0.15s ease',
+                      ? `transform ${[2.0, 2.6, 3.2][index]}s cubic-bezier(0.15, 0.85, 0.15, 1.05)` 
+                      : 'none',
                     filter: `blur(${blurs[index]}px)`,
-                    transformStyle: 'preserve-3d',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '10px',
+                    gap: '12px',
+                    paddingTop: '0px',
                   }}
                 >
-                  {/* Symbol (center) */}
-                  <span style={{ fontSize: '3rem', filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.6))' }}>
-                    {displaySymbol.emoji}
-                  </span>
-                  <span 
-                    style={{ 
-                      fontSize: '0.65rem', 
-                      fontFamily: 'monospace', 
-                      color: 'var(--color-gold)', 
-                      fontWeight: 'bold',
-                      letterSpacing: '0.08em'
-                    }}
-                  >
-                    {displaySymbol.id}
-                  </span>
+                  {symbols.map((symbol, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        height: '100px', // Item height: 100px
+                        width: '100px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <span style={{ fontSize: '3rem', filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.6))' }}>
+                        {symbol.emoji}
+                      </span>
+                      <span 
+                        style={{ 
+                          fontSize: '0.65rem', 
+                          fontFamily: 'monospace', 
+                          color: 'var(--color-gold)', 
+                          fontWeight: 'bold',
+                          letterSpacing: '0.08em'
+                        }}
+                      >
+                        {symbol.id}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
             );
