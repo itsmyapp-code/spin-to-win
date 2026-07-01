@@ -208,6 +208,7 @@ export default function SlotMachine({ prizes, disabled, onComplete }: SlotMachin
           const newReel = [...next[index]];
           // Place target symbol at display position
           newReel[1] = targets[index];
+          next[index] = newReel;
           return next;
         });
 

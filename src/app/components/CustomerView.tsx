@@ -106,16 +106,16 @@ export default function CustomerView({ token }: CustomerViewProps) {
           await saveSpinResult(db, customer.id, prize.id, prize.name, prizeCode, newSpinsCount, 'fresh', updatedPrizesWon);
         } else {
           await saveSpinResult(db, customer.id, prize.id, prize.name, prizeCode, newSpinsCount, spinStatus, updatedPrizesWon);
-          setCustomer((prev) => prev ? {
-            ...prev,
-            spinsCount: newSpinsCount,
-            spinStatus,
-            prizeId: prize.id,
-            prizeName: prize.name,
-            prizeCode,
-            prizesWon: updatedPrizesWon
-          } : prev);
         }
+        setCustomer((prev) => prev ? {
+          ...prev,
+          spinsCount: newSpinsCount,
+          spinStatus: isTestSession ? 'fresh' : spinStatus,
+          prizeId: prize.id,
+          prizeName: prize.name,
+          prizeCode,
+          prizesWon: updatedPrizesWon
+        } : prev);
       } catch (e) {
         // Result stored locally even if network update fails
       }
