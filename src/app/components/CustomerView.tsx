@@ -9,6 +9,9 @@ import {
 } from '@/lib/firestoreOps';
 import { useAuth } from './AuthContext';
 import SpinWheel from './SpinWheel';
+import ScratchCard from './ScratchCard';
+import SlotMachine from './SlotMachine';
+import ConfettiEffect from './ConfettiEffect';
 import type { Customer, PrizeTier, WheelConfig } from '@/lib/types';
 
 interface CustomerViewProps {
@@ -329,53 +332,16 @@ export default function CustomerView({ token }: CustomerViewProps) {
   const spinsLeft = Math.max(0, maxSpins - spinsDone);
   const isSpunOut = spinsLeft <= 0;
   const isTestSession = customer.name.toLowerCase().includes('test') || (token && token.toLowerCase().includes('test'));
+  const gameType = config.gameType || 'wheel';
 
-  // ─── Fresh or Spin History Page Layout ──────────────────────────────────────
   return (
-    <div className="animate-fade-in grid-two-col" style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto', alignItems: 'start' }}>
+    <div className="animate-fade-in" style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
       
-      {/* Left: Wheel */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}>
-        
-        {/* Welcome */}
-        <div className="glass" style={{ padding: '20px 24px', borderRadius: '8px', width: '100%' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.72rem', letterSpacing: '0.12em', textTransform: 'uppercase', margin: '0 0 4px' }}>
-                Welcome back
-              </p>
-              <h2 style={{ color: 'var(--color-gold)', fontSize: '1.4rem', fontWeight: 800, margin: 0 }}>
-                {customer.name}
-              </h2>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <span className="badge-gold">
-                Spins: {spinsDone} / {maxSpins}
-              </span>
-            </div>
-          </div>
-          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.76rem', margin: '8px 0 0' }}>
-            {isSpunOut 
-              ? 'You have completed all your promotional spins! Check your win ledger below.' 
-              : `You have ${spinsLeft} spin${spinsLeft !== 1 ? 's' : ''} remaining. Good luck! 🍀`
-            }
-          </p>
-        </div>
+      {/* Confetti overlay on winning a non-P6 prize */}
+      {spinResult && spinResult.prize.id !== 'P6' && <ConfettiEffect />}
 
-        {/* Wheel Viewport placement - Lower/middle ergonomics */}
-        <div style={{ marginTop: '10px', width: '100%', display: 'flex', justifyContent: 'center' }}>
-          <WheelPanel
-            key={spinResult ? 'won' : 'idle'}
-            prizes={config.prizes}
-            disabled={isSpunOut && !isTestSession}
-            onSpinComplete={handleSpinComplete}
-            alreadySpun={isSpunOut}
-          />
-        </div>
-      </div>
-
-      {/* Right: Won prizes ledger / results history */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
+      {/* Top Section: ResultCard (if won/lost) or Welcome (if fresh/idle) */}
+      <div style={{ width: '100%' }}>
         {spinResult ? (
           <ResultCard
             customer={customer}
@@ -390,39 +356,88 @@ export default function CustomerView({ token }: CustomerViewProps) {
             onSpinAgain={() => setSpinResult(null)}
           />
         ) : (
-          <div
-            className="glass"
-            style={{
-              padding: '40px',
-              borderRadius: '8px',
-              textAlign: 'center',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '16px',
-              minHeight: '300px',
-              justifyContent: 'center',
-            }}
-          >
-            <div style={{ fontSize: '3rem' }}>🎡</div>
-            <h3 style={{ color: 'var(--color-gold)', fontSize: '1rem', letterSpacing: '0.08em', margin: 0 }}>
-              SPIN TO REVEAL YOUR PRIZE
-            </h3>
-            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem', lineHeight: '1.7', margin: 0 }}>
-              Click the button below the wheel to start.<br />
-              Your result will be saved automatically.
-            </p>
-            <div style={{
-              width: '60px',
-              height: '2px',
-              background: 'linear-gradient(90deg, transparent, var(--color-gold), transparent)',
-              margin: '8px 0',
-            }} />
-            <p style={{ color: 'var(--color-text-dim)', fontSize: '0.72rem', margin: 0 }}>
-              This promotional link allows {maxSpins} total spin{maxSpins !== 1 ? 's' : ''}.
+          <div className="glass" style={{ padding: '20px 24px', borderRadius: '8px', width: '100%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.72rem', letterSpacing: '0.12em', textTransform: 'uppercase', margin: '0 0 4px' }}>
+                  Welcome back
+                </p>
+                <h2 style={{ color: 'var(--color-gold)', fontSize: '1.4rem', fontWeight: 800, margin: 0 }}>
+                  {customer.name}
+                </h2>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <span className="badge-gold">
+                  Spins: {spinsDone} / {isTestSession || maxSpins >= 999999 ? '∞' : maxSpins}
+                </span>
+              </div>
+            </div>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.76rem', margin: '8px 0 0' }}>
+              {isSpunOut 
+                ? 'You have completed all your promotional spins! Check your win ledger below.' 
+                : isTestSession || maxSpins >= 999999
+                  ? 'You have unlimited spins remaining. Good luck! 🍀'
+                  : `You have ${spinsLeft} spin${spinsLeft !== 1 ? 's' : ''} remaining. Good luck! 🍀`
+              }
             </p>
           </div>
         )}
+      </div>
+
+      {/* Main Grid: Game View (left/center) and Ledger/Info (right) */}
+      <div className="grid-two-col" style={{ alignItems: 'start' }}>
+        
+        {/* Game Viewport placement */}
+        <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+          <GamePanel
+            gameType={gameType}
+            key={spinResult ? 'won' : 'idle'}
+            prizes={config.prizes}
+            disabled={isSpunOut && !isTestSession}
+            onComplete={handleSpinComplete}
+            alreadySpun={isSpunOut}
+          />
+        </div>
+
+        {/* Right Info pane */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
+          {!spinResult && (
+            <div
+              className="glass"
+              style={{
+                padding: '40px',
+                borderRadius: '8px',
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '16px',
+                minHeight: '260px',
+                justifyContent: 'center',
+              }}
+            >
+              <div style={{ fontSize: '3rem' }}>{gameType === 'scratch' ? '🎫' : gameType === 'slots' ? '🎰' : '🎡'}</div>
+              <h3 style={{ color: 'var(--color-gold)', fontSize: '1rem', letterSpacing: '0.08em', margin: 0 }}>
+                {gameType === 'scratch' ? 'SCRATCH TO REVEAL YOUR PRIZE' : gameType === 'slots' ? 'PULL TO REVEAL YOUR PRIZE' : 'SPIN TO REVEAL YOUR PRIZE'}
+              </h3>
+              <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem', lineHeight: '1.7', margin: 0 }}>
+                {gameType === 'scratch' ? 'Scratch the card to uncover symbols.' : gameType === 'slots' ? 'Pull down the slot lever to spin reels.' : 'Click the button below the wheel to start.'}<br />
+                Your result will be saved automatically.
+              </p>
+              <div style={{
+                width: '60px',
+                height: '2px',
+                background: 'linear-gradient(90deg, transparent, var(--color-gold), transparent)',
+                margin: '8px 0',
+              }} />
+              <p style={{ color: 'var(--color-text-dim)', fontSize: '0.72rem', margin: 0 }}>
+                {isTestSession || maxSpins >= 999999
+                  ? 'This promotional link allows unlimited spins.'
+                  : `This promotional link allows ${maxSpins} total spin${maxSpins !== 1 ? 's' : ''}.`
+                }
+              </p>
+            </div>
+          )}
 
         {/* Historic won prizes summary list */}
         {customer.prizesWon && customer.prizesWon.length > 0 && (
@@ -467,6 +482,7 @@ export default function CustomerView({ token }: CustomerViewProps) {
           </div>
         )}
       </div>
+    </div>
 
       {/* Cinematic scale-in post-win transition overlay */}
       {showWinOverlay && spinResult && (
@@ -538,22 +554,30 @@ export default function CustomerView({ token }: CustomerViewProps) {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function WheelPanel({
-  prizes, disabled, onSpinComplete, alreadySpun,
+function GamePanel({
+  gameType, prizes, disabled, onComplete, alreadySpun,
 }: {
+  gameType: 'wheel' | 'scratch' | 'slots';
   prizes: PrizeTier[];
   disabled: boolean;
-  onSpinComplete: (prize: PrizeTier, code: string) => void;
+  onComplete: (prize: PrizeTier, code: string) => void;
   alreadySpun: boolean;
 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', width: '100%' }}>
       {alreadySpun && (
         <div className="badge-gold" style={{ alignSelf: 'flex-start' }}>
-          All Allowed Spins Completed
+          All Allowed Plays Completed
         </div>
       )}
-      <SpinWheel prizes={prizes} onSpinComplete={onSpinComplete} disabled={disabled} />
+      
+      {gameType === 'scratch' ? (
+        <ScratchCard prizes={prizes} onComplete={onComplete} disabled={disabled} />
+      ) : gameType === 'slots' ? (
+        <SlotMachine prizes={prizes} onComplete={onComplete} disabled={disabled} />
+      ) : (
+        <SpinWheel prizes={prizes} onSpinComplete={onComplete} disabled={disabled} />
+      )}
 
       {/* Clean Prize Legend */}
       <div className="glass" style={{ width: '100%', padding: '16px', borderRadius: '8px', marginTop: '12px' }}>

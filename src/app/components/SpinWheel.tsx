@@ -65,6 +65,7 @@ export default function SpinWheel({ prizes, onSpinComplete, disabled }: SpinWhee
   const [rotation, setRotation] = useState(0);
   const [spinState, setSpinState] = useState<SpinState>('idle');
   const [needleTickIndex, setNeedleTickIndex] = useState(0);
+  const [countdownNum, setCountdownNum] = useState<number | null>(null);
   const currentRotation = useRef(0);
   const wheelRef = useRef<SVGGElement>(null);
 
@@ -134,8 +135,7 @@ export default function SpinWheel({ prizes, onSpinComplete, disabled }: SpinWhee
     } catch (e) {}
   }, []);
 
-  const handleSpin = useCallback(() => {
-    if (spinState !== 'idle' || disabled) return;
+  const startActualSpin = useCallback(() => {
     setSpinState('spinning');
     setNeedleTickIndex(0);
 
@@ -154,10 +154,9 @@ export default function SpinWheel({ prizes, onSpinComplete, disabled }: SpinWhee
     const totalDuration = 3500;
     const ticksCount = 42;
     for (let i = 0; i < ticksCount; i++) {
-      // Decelerating time curve (using quadratic ease-out)
       const ratio = i / ticksCount;
       const delay = totalDuration * (1 - Math.pow(1 - ratio, 2.5));
-      const pitch = 850 - 450 * ratio; // Lower pitch as it slows down
+      const pitch = 850 - 450 * ratio;
       setTimeout(() => {
         playTickSound(pitch, 0.04);
         setNeedleTickIndex(i + 1);
@@ -169,12 +168,61 @@ export default function SpinWheel({ prizes, onSpinComplete, disabled }: SpinWhee
       playWinChime();
       onSpinComplete(selectedSegment.prize, prizeCode);
     }, 3600);
-  }, [spinState, disabled, prizes, segments, onSpinComplete, playTickSound, playWinChime]);
+  }, [prizes, segments, onSpinComplete, playTickSound, playWinChime]);
+
+  const handleSpin = useCallback(() => {
+    if (spinState !== 'idle' || disabled) return;
+    
+    // Start countdown
+    setCountdownNum(3);
+    playTickSound(523.25, 0.1); // C5
+
+    setTimeout(() => {
+      setCountdownNum(2);
+      playTickSound(587.33, 0.1); // D5
+      setTimeout(() => {
+        setCountdownNum(1);
+        playTickSound(659.25, 0.1); // E5
+        setTimeout(() => {
+          setCountdownNum(null);
+          startActualSpin();
+        }, 1000);
+      }, 1000);
+    }, 1000);
+  }, [spinState, disabled, startActualSpin, playTickSound]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px' }}>
       {/* Wheel container - auto-scales via CSS */}
       <div style={{ position: 'relative', width: '100%', maxWidth: `${SIZE}px` }}>
+        {/* Countdown overlay */}
+        {countdownNum !== null && (
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'rgba(7,7,10,0.85)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '50%',
+            pointerEvents: 'none',
+          }}>
+            <span 
+              className="animate-pulse-gold-ring"
+              style={{
+                fontSize: '7rem',
+                color: 'var(--color-gold-bright)',
+                fontWeight: 900,
+                textShadow: '0 0 30px rgba(197,168,107,0.9)',
+                animation: 'pulseScale 1s ease-in-out infinite'
+              }}
+            >
+              {countdownNum}
+            </span>
+          </div>
+        )}
+
         {/* Outer glow ring */}
         <div
           aria-hidden="true"

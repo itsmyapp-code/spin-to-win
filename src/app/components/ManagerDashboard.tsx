@@ -69,7 +69,8 @@ export default function ManagerDashboard() {
     setSaveMsg(null);
     try {
       const { db } = initFirebase();
-      await saveWheelConfig(db, editedPrizes, user.email, customTerms);
+      const currentGameType = config?.gameType || 'wheel';
+      await saveWheelConfig(db, editedPrizes, user.email, customTerms, currentGameType);
       setConfig((prev) => prev ? { ...prev, prizes: editedPrizes, customTerms } : prev);
       setSaveMsg('Configuration saved successfully.');
     } catch {
@@ -78,7 +79,7 @@ export default function ManagerDashboard() {
       setSaving(false);
       setTimeout(() => setSaveMsg(null), 4000);
     }
-  }, [user, editedPrizes, customTerms]);
+  }, [user, editedPrizes, customTerms, config]);
 
   const [rolesList, setRolesList] = useState<any[]>([]);
   const [newStaffEmail, setNewStaffEmail] = useState('');

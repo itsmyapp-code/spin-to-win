@@ -541,3 +541,9 @@ body {
     grid-template-columns: 1fr !important;
   }
 }
+
+@keyframes pulseScale {
+  0% { transform: scale(0.6); opacity: 0.2; }
+  50% { transform: scale(1.25); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.95; }
+}

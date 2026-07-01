@@ -14,6 +14,7 @@ export interface WheelConfig {
   updatedAt: string;
   updatedByEmail: string;
   customTerms?: string;
+  gameType?: 'wheel' | 'scratch' | 'slots';
 }
 
 export interface Customer {

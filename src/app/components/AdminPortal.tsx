@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { initFirebase } from '@/lib/firebase';
-import { bulkCreateCustomers, setStaffRole, deleteStaffRole } from '@/lib/firestoreOps';
+import { bulkCreateCustomers, setStaffRole, deleteStaffRole, getWheelConfig, saveWheelConfig } from '@/lib/firestoreOps';
 import { collection, onSnapshot } from 'firebase/firestore';
 import type { Customer } from '@/lib/types';
 import StaffAuthForm from './StaffAuthForm';
@@ -74,7 +74,6 @@ export default function AdminPortal() {
     });
     return unsub;
   }, [user]);
-
   const handleAddRole = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newRoleEmail.includes('@') || newRoleName.trim().length < 2) {
@@ -419,6 +418,7 @@ export default function AdminPortal() {
           </div>
         </div>
       </section>
+
 
       {/* Help Guide Accordion */}
       <section style={{ marginTop: '24px' }}>

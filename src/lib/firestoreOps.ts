@@ -40,13 +40,15 @@ export async function saveWheelConfig(
   db: Firestore,
   prizes: PrizeTier[],
   userEmail: string,
-  customTerms?: string
+  customTerms?: string,
+  gameType?: 'wheel' | 'scratch' | 'slots'
 ): Promise<void> {
   const config: WheelConfig = {
     prizes,
     updatedAt: new Date().toISOString(),
     updatedByEmail: userEmail,
     customTerms: customTerms || '',
+    gameType: gameType || 'wheel',
   };
   await setDoc(doc(db, CONFIG_DOC), config);
 }
