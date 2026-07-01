@@ -240,6 +240,9 @@ export default function SlotMachine({ prizes, disabled, onComplete }: SlotMachin
 
       {/* Main Container */}
       <div 
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
         style={{
           display: 'flex',
           flexDirection: 'row',
@@ -247,13 +250,12 @@ export default function SlotMachine({ prizes, disabled, onComplete }: SlotMachin
           gap: '24px',
           width: '100%',
           maxWidth: '520px',
+          touchAction: 'none',
+          cursor: spinState === 'idle' ? 'grab' : 'default',
         }}
       >
         {/* Slot Machine Body */}
         <div
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
           style={{
             flex: 1,
             display: 'grid',
@@ -264,8 +266,6 @@ export default function SlotMachine({ prizes, disabled, onComplete }: SlotMachin
             borderRadius: '12px',
             padding: '16px',
             boxShadow: '0 16px 48px rgba(0,0,0,0.8), inset 0 0 30px rgba(197,168,107,0.1)',
-            touchAction: 'none',
-            cursor: spinState === 'idle' ? 'grab' : 'default',
             position: 'relative',
             overflow: 'hidden'
           }}
